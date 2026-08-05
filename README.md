@@ -107,7 +107,7 @@ Die UniFi UPS 2U bringt selbst einen NUT-Server mit (`upsd 2.8.0`, Gerät `ups01
 und lässt sich ohne Zusatzsoftware direkt eintragen:
 
 ```ini
-NUT_HOST=<IP der USV>
+NUT_HOST=192.168.29.113
 NUT_PORT=3493
 NUT_NAME=unifi
 ```
