@@ -1,5 +1,7 @@
 # ups-nut
 
+[![CI](https://github.com/PhilippKuhlmann/UPS/actions/workflows/ci.yml/badge.svg)](https://github.com/PhilippKuhlmann/UPS/actions/workflows/ci.yml)
+
 Web-Dashboard für USV-Geräte, die an einem **NUT-Server** (Network UPS Tools) hängen.
 Die App spricht das NUT-Netzwerkprotokoll direkt über TCP 3493 — es muss kein
 `upsc`, kein NUT-Client und kein Zusatzpaket auf dem Host installiert sein.
@@ -67,9 +69,30 @@ npm run build && npm start
 docker compose up -d
 ```
 
-`docker-compose.yml` erwartet `NUT_HOST` (und optional die übrigen Variablen) aus
-einer `.env` neben der Compose-Datei. Verlauf und Ereignisse liegen im Volume
-`ups-nut-data` unter `/data`.
+Das genügt: der Container startet auch ohne konfigurierten NUT-Server, danach
+meldest du dich auf Port 8080 an und legst den Server unter „Server" an.
+
+Wer vorbelegen will, legt eine `.env` neben die Compose-Datei — alle Variablen
+aus `.env.example` werden durchgereicht. Für den unbeaufsichtigten Betrieb lohnt
+sich `ADMIN_PASSWORD`, dann entfällt der erzwungene Passwortwechsel:
+
+```ini
+NUT_HOST=192.168.29.113
+ADMIN_PASSWORD=ein-langes-passwort
+HOST_PORT=8080
+```
+
+Die gesamte Datenbank liegt im Volume `ups-nut-data` unter `/data` und übersteht
+Updates. Steht ein Reverse Proxy mit HTTPS davor, `SESSION_COOKIE_SECURE=1`
+setzen.
+
+Das Image baut in zwei Stufen: die erste bringt die Toolchain für `better-sqlite3`
+mit, die zweite enthält nur Laufzeit, `dist/` und `public/` und läuft als
+Benutzer `node`. Ein Healthcheck fragt `/healthz` ab.
+
+Der Build wird bei jedem Push auf `main` von GitHub Actions gebaut, gestartet und
+geprüft (`/healthz`, Anmeldesperre, Login, Oberfläche, Serververwaltung) —
+siehe [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 ## Konfiguration
 
