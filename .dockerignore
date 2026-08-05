@@ -1,0 +1,16 @@
+# Der Build-Kontext soll nur Quellcode enthalten. Ohne diese Datei würden
+# node_modules und vor allem data/ (Datenbank mit Konten und Sitzungen) an
+# den Docker-Daemon übertragen.
+node_modules
+dist
+data
+.env
+.git
+.gitignore
+.claude
+*.log
+.DS_Store
+README.md
+docker-compose.yml
+Dockerfile
+.dockerignore

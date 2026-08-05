@@ -4,29 +4,51 @@ services:
     image: ups-nut
     container_name: ups-nut
     restart: unless-stopped
+    # Node handles SIGTERM itself, but an init process reaps stray children.
+    init: true
     ports:
-      - "8080:8080"
+      - "${HOST_PORT:-8080}:8080"
     volumes:
-      # History and the event log live here — keep it to survive updates.
+      # Messwerte, Ereignisse, Serverliste und Konten liegen hier — beim
+      # Aktualisieren behalten, sonst beginnt alles von vorn.
       - ups-nut-data:/data
     environment:
-      # Belegt die Serverliste beim ersten Start vor; danach zählt die Oberfläche.
-      # Kann leer bleiben — dann wird der Server nach dem Login angelegt.
+      # ── NUT-Server ────────────────────────────────────────────────────
+      # Belegt die Serverliste beim ersten Start vor; danach zählt die
+      # Oberfläche. Darf leer bleiben — dann wird der Server nach dem
+      # Login unter „Server" angelegt.
       NUT_HOST: ${NUT_HOST:-}
       NUT_PORT: ${NUT_PORT:-3493}
-      # Ohne ADMIN_PASSWORD entsteht admin/admin mit erzwungener Änderung.
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
-      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-0}
       NUT_NAME: ${NUT_NAME:-nut}
       NUT_USERNAME: ${NUT_USERNAME:-}
       NUT_PASSWORD: ${NUT_PASSWORD:-}
+      NUT_SERVERS: ${NUT_SERVERS:-}
+
+      # ── Anmeldung ─────────────────────────────────────────────────────
+      # Ohne ADMIN_PASSWORD entsteht admin/admin mit erzwungener Änderung.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-336}
+      # Auf 1 setzen, sobald ein Reverse Proxy mit HTTPS davorsteht.
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-0}
+      AUTH_ENABLED: ${AUTH_ENABLED:-1}
+
+      # ── Abfrage & Verlauf ─────────────────────────────────────────────
       POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-5000}
       HISTORY_RETENTION_DAYS: ${HISTORY_RETENTION_DAYS:-30}
+
+      # ── Alarme ────────────────────────────────────────────────────────
       ALERT_CHARGE_BELOW: ${ALERT_CHARGE_BELOW:-30}
       ALERT_LOAD_ABOVE: ${ALERT_LOAD_ABOVE:-85}
       ALERT_RUNTIME_BELOW_SECONDS: ${ALERT_RUNTIME_BELOW_SECONDS:-300}
       ALERT_TEMPERATURE_ABOVE: ${ALERT_TEMPERATURE_ABOVE:-45}
       ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   ups-nut-data:

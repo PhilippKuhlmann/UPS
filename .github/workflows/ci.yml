@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+
+  docker:
+    name: Docker-Image bauen und starten
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image bauen
+        run: docker compose build
+
+      # Der Container muss auch ohne erreichbaren NUT-Server hochkommen —
+      # Server werden ja in der Oberfläche angelegt.
+      - name: Container starten
+        env:
+          ADMIN_PASSWORD: ci-testpasswort
+        run: docker compose up -d
+
+      - name: Auf Healthcheck warten
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/healthz > /tmp/health.json; then
+              echo "gesund nach ${i}s: $(cat /tmp/health.json)"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "kein /healthz innerhalb von 30 s"
+          exit 1
+
+      - name: API ist ohne Anmeldung gesperrt
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/state)
+          echo "GET /api/state ohne Sitzung -> $code"
+          test "$code" = "401"
+
+      - name: Anmeldung funktioniert
+        run: |
+          body=$(curl -s -c /tmp/cookies -X POST \
+            -H 'content-type: application/json' \
+            -d '{"username":"admin","password":"ci-testpasswort"}' \
+            http://localhost:8080/api/auth/login)
+          echo "Login: $body"
+          echo "$body" | grep -q '"username":"admin"'
+
+          code=$(curl -s -b /tmp/cookies -o /dev/null -w '%{http_code}' http://localhost:8080/api/state)
+          echo "GET /api/state mit Sitzung -> $code"
+          test "$code" = "200"
+
+      - name: Oberfläche wird ausgeliefert
+        run: curl -fsS http://localhost:8080/ | grep -q 'USV-Überwachung'
+
+      - name: Serververwaltung antwortet
+        run: |
+          curl -fsS -b /tmp/cookies http://localhost:8080/api/servers | grep -q '^\['
+
+      - name: Logs bei Fehlschlag
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Aufräumen
+        if: always()
+        run: docker compose down -v

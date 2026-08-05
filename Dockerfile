@@ -7,8 +7,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 make g++ ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package.json ./
-RUN npm install --no-audit --no-fund
+# npm ci baut exakt gegen package-lock.json — gleiche Abhängigkeiten wie lokal.
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
 
 COPY tsconfig.json ./
 COPY src ./src
