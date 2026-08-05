@@ -10,7 +10,8 @@ Die App spricht das NUT-Netzwerkprotokoll direkt über TCP 3493 — es muss kein
 
 - **Anmeldung** — die Oberfläche und die gesamte API sind hinter einem Login.
   Beim ersten Start entsteht `admin` / `admin`; dieses Passwort muss beim ersten
-  Login ersetzt werden, vorher antwortet nichts anderes.
+  Login ersetzt werden, vorher antwortet nichts anderes. Später lässt es sich
+  jederzeit unter „Konto" ändern; alle anderen Sitzungen enden dabei.
 - **USV-Server über die Oberfläche** — unter „Server" lassen sich NUT-Server
   anlegen, bearbeiten, pausieren und entfernen. „Verbindung testen" zeigt vor dem
   Speichern, welche USV der Server meldet. Änderungen greifen sofort, ohne

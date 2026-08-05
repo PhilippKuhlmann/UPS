@@ -1128,6 +1128,8 @@ a.command {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+  /* Passwortfelder brauchen keine 1400 px — im Kontopanel sonst grotesk breit. */
+  max-width: 26rem;
 }
 
 .field {

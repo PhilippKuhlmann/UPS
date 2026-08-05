@@ -1,7 +1,7 @@
 import { api, authEvents, connectLiveFeed } from './api.js';
 import { createChart } from './chart.js';
 import { createDiagram } from './diagram.js';
-import { renderLogin, renderPasswordChange } from './gate.js';
+import { renderAccount, renderLogin, renderPasswordChange } from './gate.js';
 import { renderServers } from './servers.js';
 import {
   clockTime,
@@ -30,6 +30,8 @@ const state = {
   unacknowledged: 0,
   /** False until the first snapshot arrives, so views can tell "loading" from "gone". */
   loaded: false,
+  /** The signed-in account, or null when authentication is switched off. */
+  user: null,
 };
 
 /**
@@ -681,6 +683,13 @@ function route() {
     view = renderDevice(main, `${decodeURIComponent(deviceMatch[1])}/${decodeURIComponent(deviceMatch[2])}`);
   } else if (hash.startsWith('#/events')) {
     view = renderEvents(main);
+  } else if (hash.startsWith('#/konto')) {
+    view = renderAccount(main, {
+      user: state.user,
+      onChanged: (user) => {
+        state.user = user;
+      },
+    });
   } else if (hash.startsWith('#/servers')) {
     view = renderServers(main, {
       onChanged: () => {
@@ -802,6 +811,8 @@ function stopApp() {
 }
 
 function afterAuth(user) {
+  state.user = user ?? null;
+
   if (user?.mustChangePassword) {
     stopApp();
     renderPasswordChange(main, user, afterAuth);
@@ -830,7 +841,9 @@ async function gate() {
   }
 
   if (!session.authEnabled) {
+    // Without authentication there is no account to show or password to change.
     logoutButton.hidden = true;
+    document.getElementById('tab-konto').hidden = true;
     nav.hidden = false;
     linkStrip.hidden = false;
     startApp();

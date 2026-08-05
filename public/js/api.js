@@ -29,7 +29,12 @@ async function request(path, options = {}) {
 
     // A session that expired mid-use must send the person back to the login,
     // not surface as a confusing failure on whatever they happened to click.
-    if (response.status === 401 || error.code === 'password_change_required') {
+    //
+    // Only the server's own verdict counts here. A wrong password also answers
+    // 401, but that is a form error to display — re-gating on it would rebuild
+    // the view and throw the message away before anyone could read it.
+    const sessionGone = error.code === 'unauthenticated' || error.code === 'password_change_required';
+    if (sessionGone) {
       authEvents.dispatchEvent(new CustomEvent('lost', { detail: error }));
     }
 
