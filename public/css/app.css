@@ -1,0 +1,1241 @@
+/*
+ * Visual direction: an electrical one-line diagram sheet. Monospace is the
+ * primary face (the silkscreen of a switchgear panel), the surface is a cool
+ * printed-paper grey, and the only saturated colour on screen belongs to a
+ * conductor that is actually carrying current.
+ */
+
+:root {
+  color-scheme: light;
+
+  --paper: #f2f2ee;
+  --panel: #fbfbf9;
+  --sunken: #e8e9e3;
+  --ink: #14161a;
+  --ink-2: #565b5f;
+  --ink-3: #83888b;
+  --rule: #d3d5cd;
+  --rule-strong: #b3b6ac;
+
+  --good: #14704b;
+  --warning: #8a6200;
+  --serious: #a24a08;
+  --critical: #a81e14;
+
+  --series-charge: #0a8a55;
+  --series-load: #2f5fd0;
+  --series-voltage: #a85c00;
+
+  --dead: #a5a9a0;
+  --shadow: 0 1px 2px rgba(20, 22, 26, 0.06), 0 8px 24px -18px rgba(20, 22, 26, 0.4);
+
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --gutter: clamp(1rem, 3vw, 2rem);
+  --radius: 3px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+
+    --paper: #131513;
+    --panel: #191b19;
+    --sunken: #101210;
+    --ink: #edeee9;
+    --ink-2: #a9aea6;
+    --ink-3: #7c817a;
+    --rule: #2c302c;
+    --rule-strong: #424740;
+
+    --good: #4fa97e;
+    --warning: #c79a2e;
+    --serious: #dc7a3a;
+    --critical: #e5645c;
+
+    --series-charge: #35a26e;
+    --series-load: #6084f0;
+    --series-voltage: #c17d1c;
+
+    --dead: #4c514b;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -18px rgba(0, 0, 0, 0.9);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --paper: #131513;
+  --panel: #191b19;
+  --sunken: #101210;
+  --ink: #edeee9;
+  --ink-2: #a9aea6;
+  --ink-3: #7c817a;
+  --rule: #2c302c;
+  --rule-strong: #424740;
+
+  --good: #4fa97e;
+  --warning: #c79a2e;
+  --serious: #dc7a3a;
+  --critical: #e5645c;
+
+  --series-charge: #35a26e;
+  --series-load: #6084f0;
+  --series-voltage: #c17d1c;
+
+  --dead: #4c514b;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -18px rgba(0, 0, 0, 0.9);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Layout rules below set `display`, which would otherwise beat the UA rule for
+   the hidden attribute. */
+[hidden] {
+  display: none !important;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p,
+figure,
+ul,
+ol {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--panel);
+  padding: 0.5rem 0.75rem;
+  z-index: 20;
+}
+
+.skip-link:focus {
+  left: var(--gutter);
+  top: 0.5rem;
+}
+
+/* ── Masthead ─────────────────────────────────────────────────────────── */
+
+.masthead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--rule);
+}
+
+.masthead__inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0.85rem var(--gutter) 0.7rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.masthead__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+/* A bolt cut out of a graphite square — the same mark as the favicon. */
+.masthead__mark {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius);
+  background: var(--ink);
+  flex: none;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  position: relative;
+}
+
+.masthead__mark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--series-charge);
+  clip-path: polygon(56% 12%, 28% 56%, 47% 56%, 41% 88%, 69% 44%, 50% 44%);
+}
+
+.masthead__title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.masthead__subtitle {
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+
+.masthead__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tabs {
+  display: flex;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.tab {
+  padding: 0.35rem 0.8rem;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ink-2);
+  background: var(--panel);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tab + .tab {
+  border-left: 1px solid var(--rule);
+}
+
+.tab[aria-current="page"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.tab__badge {
+  background: var(--critical);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 0.35rem;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.icon-button {
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.icon-button:hover {
+  color: var(--ink);
+  border-color: var(--rule-strong);
+}
+
+/* The live link strip: a hairline that reports the websocket, not decoration. */
+.masthead__link {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 var(--gutter) 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.masthead__link-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dead);
+}
+
+.masthead__link[data-state="live"] .masthead__link-dot {
+  background: var(--good);
+}
+
+.masthead__link[data-state="lost"] .masthead__link-dot {
+  background: var(--critical);
+}
+
+.masthead__link[data-state="lost"] {
+  color: var(--critical);
+}
+
+/* ── Layout ───────────────────────────────────────────────────────────── */
+
+.main {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 1.5rem var(--gutter) 4rem;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.section-title {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.device-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
+}
+
+/* ── Panels ───────────────────────────────────────────────────────────── */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.panel + .panel {
+  margin-top: 1rem;
+}
+
+.panel__head {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.panel__body {
+  padding: 1rem;
+}
+
+/* ── Device card ──────────────────────────────────────────────────────── */
+
+.device {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 120ms ease;
+}
+
+.device:hover {
+  border-color: var(--rule-strong);
+}
+
+.device__head {
+  padding: 0.85rem 1rem 0.7rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.device__name {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.device__meta {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-top: 0.15rem;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: var(--radius);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: none;
+}
+
+.status-chip__glyph {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.status-chip[data-severity="good"] {
+  color: var(--good);
+}
+.status-chip[data-severity="warning"] {
+  color: var(--warning);
+}
+.status-chip[data-severity="serious"] {
+  color: var(--serious);
+}
+.status-chip[data-severity="critical"] {
+  color: var(--critical);
+}
+
+.device__diagram {
+  padding: 0.6rem 1rem 0.2rem;
+}
+
+.device__readouts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  border-top: 1px solid var(--rule);
+}
+
+.readout {
+  padding: 0.6rem 0.9rem 0.75rem;
+  border-right: 1px solid var(--rule);
+  min-width: 0;
+}
+
+.readout:last-child {
+  border-right: 0;
+}
+
+.readout__label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.readout__value {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  margin-top: 0.15rem;
+  line-height: 1.15;
+}
+
+.readout__unit {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-left: 0.15em;
+}
+
+.readout--muted .readout__value {
+  color: var(--ink-3);
+}
+
+.device__error {
+  padding: 0.7rem 1rem;
+  border-top: 1px solid var(--rule);
+  color: var(--critical);
+  font-size: 12px;
+  word-break: break-word;
+}
+
+/* ── One-line diagram (the signature element) ─────────────────────────── */
+
+/* The drawing is a schematic, not a banner — it stops growing past its natural
+   size so the detail view does not turn it into wall art. */
+.oneline {
+  width: 100%;
+  max-width: 620px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.oneline__node-box {
+  fill: var(--sunken);
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+
+.oneline__node-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  fill: var(--ink-2);
+  text-transform: uppercase;
+}
+
+.oneline__node-value {
+  font-family: var(--mono);
+  font-size: 15px;
+  fill: var(--ink);
+}
+
+.oneline__base {
+  fill: none;
+  stroke: var(--dead);
+  stroke-width: 2;
+}
+
+.oneline__flow {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 2.5;
+  stroke-dasharray: 7 9;
+  stroke-linecap: round;
+}
+
+.oneline__arrow {
+  fill: var(--dead);
+}
+
+.oneline__break {
+  stroke: var(--critical);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+/* A conductor is "live" only when current is actually flowing through it. */
+.oneline [data-live="true"] .oneline__base {
+  stroke: color-mix(in srgb, var(--live-color) 35%, transparent);
+}
+
+.oneline [data-live="true"] .oneline__flow {
+  stroke: var(--live-color);
+  animation: oneline-flow 1.1s linear infinite;
+}
+
+.oneline [data-live="true"][data-reverse="true"] .oneline__flow {
+  animation-direction: reverse;
+}
+
+.oneline [data-live="true"] .oneline__arrow {
+  fill: var(--live-color);
+}
+
+.oneline [data-hidden="true"] {
+  display: none;
+}
+
+@keyframes oneline-flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+
+.oneline[data-path="battery"] .oneline__break {
+  opacity: 1;
+}
+
+.oneline--mains {
+  --live-color: var(--good);
+}
+
+.oneline--battery {
+  --live-color: var(--serious);
+}
+
+.oneline--bypass {
+  --live-color: var(--warning);
+}
+
+.oneline--off,
+.oneline--unknown {
+  --live-color: var(--dead);
+}
+
+.oneline__charge-color {
+  --live-color: var(--series-charge);
+}
+
+/* ── Alert banner & event list ────────────────────────────────────────── */
+
+.alert-bar {
+  border: 1px solid var(--rule);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 0.7rem 0.9rem;
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.alert-bar[data-severity="warning"] {
+  border-left-color: var(--warning);
+}
+.alert-bar[data-severity="serious"] {
+  border-left-color: var(--serious);
+}
+.alert-bar[data-severity="critical"] {
+  border-left-color: var(--critical);
+}
+
+.alert-bar__glyph {
+  flex: none;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.alert-bar[data-severity="warning"] .alert-bar__glyph {
+  color: var(--warning);
+}
+.alert-bar[data-severity="serious"] .alert-bar__glyph {
+  color: var(--serious);
+}
+.alert-bar[data-severity="critical"] .alert-bar__glyph {
+  color: var(--critical);
+}
+
+.alert-bar__title {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.alert-bar__text {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-top: 0.15rem;
+}
+
+.event-row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr auto;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  align-items: baseline;
+}
+
+.event-row:last-child {
+  border-bottom: 0;
+}
+
+.event-row__time {
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.event-row__title {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.event-row[data-severity="good"] .event-row__title {
+  color: var(--good);
+}
+.event-row[data-severity="warning"] .event-row__title {
+  color: var(--warning);
+}
+.event-row[data-severity="serious"] .event-row__title {
+  color: var(--serious);
+}
+.event-row[data-severity="critical"] .event-row__title {
+  color: var(--critical);
+}
+
+.event-row__message {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.event-row__device {
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* ── Charts ───────────────────────────────────────────────────────────── */
+
+.chart-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+}
+
+.chart {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  padding: 0.8rem 0.9rem 0.5rem;
+}
+
+.chart__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.chart__title {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.chart__swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+}
+
+/* The latest value is direct-labelled so identity never rests on colour alone. */
+.chart__current {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.chart__empty {
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chart__svg {
+  display: block;
+  width: 100%;
+  height: 150px;
+  touch-action: pan-y;
+}
+
+.chart__grid-line {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+
+.chart__axis-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  fill: var(--ink-3);
+}
+
+.chart__area {
+  stroke: none;
+  opacity: 0.12;
+}
+
+.chart__line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart__crosshair {
+  stroke: var(--ink-3);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  opacity: 0;
+}
+
+.chart__marker {
+  stroke: var(--panel);
+  stroke-width: 2;
+  opacity: 0;
+}
+
+.chart.is-hovered .chart__crosshair,
+.chart.is-hovered .chart__marker {
+  opacity: 1;
+}
+
+.chart__tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius);
+  padding: 0.3rem 0.5rem;
+  font-size: 11px;
+  white-space: nowrap;
+  transform: translate(-50%, -130%);
+  opacity: 0;
+  transition: opacity 90ms linear;
+  z-index: 3;
+}
+
+.chart.is-hovered .chart__tooltip {
+  opacity: 1;
+}
+
+.chart__tooltip-time {
+  color: color-mix(in srgb, var(--paper) 62%, transparent);
+  margin-right: 0.4rem;
+}
+
+/* ── Range picker, tables, commands ───────────────────────────────────── */
+
+.range-picker {
+  display: flex;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.range-picker button {
+  border: 0;
+  background: var(--panel);
+  padding: 0.25rem 0.55rem;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.range-picker button + button {
+  border-left: 1px solid var(--rule);
+}
+
+.range-picker button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.var-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.var-table th {
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 400;
+  padding: 0 0.75rem 0.4rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.var-table td {
+  padding: 0.3rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--rule) 55%, transparent);
+  vertical-align: top;
+  word-break: break-word;
+}
+
+.var-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.var-table__name {
+  color: var(--ink-2);
+  width: 42%;
+}
+
+.var-table__rw {
+  color: var(--series-load);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  margin-left: 0.4rem;
+}
+
+.filter-input {
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: var(--radius);
+  padding: 0.25rem 0.5rem;
+  font-family: var(--mono);
+  font-size: 11px;
+  min-width: 11rem;
+}
+
+.command-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.command {
+  border: 1px solid var(--rule);
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.65rem;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--ink-2);
+}
+
+.command:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.command:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.command--armed {
+  border-color: var(--serious);
+  color: var(--serious);
+}
+
+.note {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 0.6rem;
+}
+
+.empty-state {
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--ink-2);
+}
+
+.empty-state__title {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.empty-state__text {
+  font-family: var(--sans);
+  font-size: 13px;
+  margin-top: 0.4rem;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-decoration: none;
+  margin-bottom: 0.8rem;
+}
+
+.back-link:hover {
+  color: var(--ink);
+}
+
+/* ── Server management ────────────────────────────────────────────────── */
+
+.server-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--rule);
+  flex-wrap: wrap;
+}
+
+.server-row:last-child {
+  border-bottom: 0;
+}
+
+.server-row > div:first-child {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.server-row__name {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.server-row__meta {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-top: 0.1rem;
+}
+
+.server-row__actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.server-form__grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+}
+
+.field--narrow {
+  max-width: 8rem;
+}
+
+.server-form__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.server-form__message {
+  font-family: var(--sans);
+  font-size: 13px;
+  margin-top: 0.9rem;
+  border-left: 3px solid var(--rule-strong);
+  padding-left: 0.6rem;
+  color: var(--ink-2);
+}
+
+.server-form__message[data-tone="good"] {
+  border-left-color: var(--good);
+  color: var(--good);
+}
+
+.server-form__message[data-tone="warning"] {
+  border-left-color: var(--warning);
+  color: var(--warning);
+}
+
+.server-form__message[data-tone="error"] {
+  border-left-color: var(--critical);
+  color: var(--critical);
+}
+
+/* The empty state offers a link styled as a button. */
+a.command {
+  text-decoration: none;
+  display: inline-block;
+}
+
+/* ── Login & password gate ────────────────────────────────────────────── */
+
+.gate {
+  display: flex;
+  justify-content: center;
+  padding: clamp(1rem, 8vh, 5rem) 0;
+}
+
+.gate__panel {
+  width: min(100%, 26rem);
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+}
+
+.gate__title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 0.3rem;
+}
+
+.gate__text {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-top: 0.5rem;
+}
+
+.gate__form {
+  margin-top: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field__label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.field__input {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--sunken);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.6rem;
+  width: 100%;
+}
+
+.field__input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.field__hint {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.gate__error {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--critical);
+  border-left: 3px solid var(--critical);
+  padding-left: 0.6rem;
+}
+
+.button-primary {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--radius);
+  padding: 0.55rem 0.9rem;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin-top: 0.2rem;
+}
+
+.button-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 85%, var(--paper));
+}
+
+.button-primary:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius);
+  font-size: 12px;
+  z-index: 30;
+  max-width: min(90vw, 34rem);
+}
+
+.toast[data-tone="error"] {
+  background: var(--critical);
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .event-row {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  .masthead__inner {
+    padding-bottom: 0.55rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+
+  /* Without motion, a live conductor is shown as a solid line instead. */
+  .oneline [data-live="true"] .oneline__flow {
+    stroke-dasharray: none;
+  }
+}

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Überwachung von USV-Geräten an einem NUT-Server" />
+    <title>USV-Überwachung</title>
+    <link rel="stylesheet" href="/css/app.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2314161A'/%3E%3Cpath d='M18 4 L9 18 h6 l-2 10 9-14 h-6 z' fill='%230A8A55'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Zum Inhalt springen</a>
+
+    <header class="masthead">
+      <div class="masthead__inner">
+        <div class="masthead__identity">
+          <span class="masthead__mark" aria-hidden="true"></span>
+          <div>
+            <h1 class="masthead__title">USV-Überwachung</h1>
+            <p class="masthead__subtitle" id="masthead-subtitle">Verbinde …</p>
+          </div>
+        </div>
+
+        <div class="masthead__controls">
+          <nav class="tabs" aria-label="Ansichten">
+            <a class="tab" data-route="#/" href="#/">Übersicht</a>
+            <a class="tab" data-route="#/events" href="#/events">Ereignisse<span class="tab__badge" id="event-badge" hidden>0</span></a>
+            <a class="tab" data-route="#/servers" href="#/servers">Server</a>
+          </nav>
+          <button class="icon-button" id="theme-toggle" type="button" aria-label="Farbschema wechseln">
+            <span class="icon-button__label" id="theme-label">Auto</span>
+          </button>
+          <button class="icon-button" id="logout" type="button" hidden>Abmelden</button>
+        </div>
+      </div>
+      <div class="masthead__link" id="connection-state" data-state="connecting">
+        <span class="masthead__link-dot" aria-hidden="true"></span>
+        <span id="connection-text">Verbindung wird aufgebaut</span>
+      </div>
+    </header>
+
+    <main id="main" class="main"></main>
+
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>
