@@ -30,7 +30,15 @@ Die App spricht das NUT-Netzwerkprotokoll direkt über TCP 3493 — es muss kein
 - **Alarme** — zehn Regeln (Batteriebetrieb, Batterie kritisch, Ladezustand,
   Restlaufzeit, Überlast, Batteriewechsel, Bypass, Temperatur, Abschaltung,
   Verbindungsverlust). Jede Regel meldet sich einmal beim Auftreten und einmal beim
-  Ende; alles landet im Ereignisprotokoll und optional auf einem Webhook.
+  Ende.
+- **Meldewege** — E-Mail über SMTP, Telegram über einen eigenen Bot und Webhook.
+  Alles unter „Meldungen" einzurichten, jeder Weg einzeln aktivierbar und mit
+  einer Testnachricht prüfbar. Dazu eine Mindeststufe, ab der überhaupt gemeldet
+  wird.
+- **Protokoll ausgeführter Befehle** — jeder `INSTCMD` und jede geänderte
+  Variable landet mit Benutzernamen im Ereignisprotokoll, abgelehnte Versuche
+  eingeschlossen. Befehle, die den Ausgang abschalten, werden zusätzlich
+  gemeldet.
 - **Alle Variablen & Steuerung** — vollständige NUT-Variablenliste mit Filter,
   `INSTCMD`-Befehle (Signalton, Batterietest, …) und Schreiben beschreibbarer
   Variablen. Befehle, die Strom wegnehmen, brauchen einen zweiten Klick.
@@ -41,7 +49,8 @@ Die App spricht das NUT-Netzwerkprotokoll direkt über TCP 3493 — es muss kein
 Die Oberfläche übernimmt die visuelle Linie von [dokuvault.de](https://dokuvault.de):
 dunkle Blaugrau-Flächen, ein einziges kräftiges Signalblau, 46-px-Blueprint-Raster,
 Space Grotesk für Überschriften, Inter für Fließtext, IBM Plex Mono für Messwerte.
-Wie dort gibt es nur das dunkle Schema.
+Dunkel ist die Vorgabe wie dort; ein helles Gegenstück und Auto lassen sich in
+der Kopfzeile wählen.
 
 Das Raster liegt hinter dem Einliniendiagramm — für einen Schaltplan genau das
 richtige Papier. Die Schriften liegen unter `public/fonts/` lokal bei (rund 91 KB,
@@ -139,7 +148,7 @@ Start vor. Danach zählt die Oberfläche.
 | `ALERT_LOAD_ABOVE` | `85` | Schwelle Last in % |
 | `ALERT_RUNTIME_BELOW_SECONDS` | `300` | Schwelle Restlaufzeit |
 | `ALERT_TEMPERATURE_ABOVE` | `45` | Schwelle Temperatur in °C |
-| `ALERT_WEBHOOK_URL` | — | Ziel für Alarm-Benachrichtigungen |
+| `ALERT_WEBHOOK_URL` | — | belegt den Webhook beim ersten Start vor |
 
 ### UniFi SmartPower UPS 2U
 
@@ -159,9 +168,9 @@ Batterietests. Angebotene Befehle: `load.on`, `load.off`, `shutdown.reboot`,
 
 ### Was in der Datenbank liegt
 
-Eine einzige SQLite-Datei (`DB_PATH`, im Container `/data/ups.db`) mit sechs
-Tabellen: `samples` (Messwerte), `events` (Alarmprotokoll), `nut_servers`
-(Serverliste), `users`, `sessions` und `sqlite_sequence`.
+Eine einzige SQLite-Datei (`DB_PATH`, im Container `/data/ups.db`): `samples`
+(Messwerte), `events` (Alarme und Befehlsprotokoll), `nut_servers` (Serverliste),
+`settings` (Meldewege), `users` und `sessions`.
 
 Zwei Dinge dazu, offen gesagt:
 
@@ -180,7 +189,9 @@ Konto und Serverliste neu.
 ### Rechte auf dem NUT-Server
 
 Lesen funktioniert bei üblicher `upsd.conf` ohne Anmeldung. Für `INSTCMD` und
-`SET VAR` braucht es einen Benutzer in `upsd.users`:
+`SET VAR` verlangen die meisten Aufstellungen einen Benutzer in `upsd.users`.
+Manche Geräte nehmen Befehle aber auch ohne Anmeldung an, darunter die UniFi
+UPS 2U — wer das nicht will, sperrt es dort und nicht in dieser App:
 
 ```ini
 [monuser]
@@ -192,27 +203,47 @@ Lesen funktioniert bei üblicher `upsd.conf` ohne Anmeldung. Für `INSTCMD` und
 Fehlen die Rechte, antwortet der NUT-Server mit `ACCESS-DENIED`; die App zeigt
 das direkt am Befehl an.
 
-### Webhook
+### Meldewege
 
-Bei jedem Beginn und Ende eines Alarms geht ein `POST` mit JSON an
-`ALERT_WEBHOOK_URL`:
+Einzurichten unter „Meldungen". Jeder Weg lässt sich einzeln aktivieren und mit
+„Testnachricht senden" prüfen, bevor der Ernstfall eintritt. Gemeldet wird ab
+einer einstellbaren Mindeststufe; Entwarnungen und Befehle, die den Ausgang
+abschalten, lassen sich getrennt an- und abschalten.
+
+**E-Mail** braucht Server, Port, Zugangsdaten, Absender und Empfänger (mehrere
+durch Komma). „Direktes TLS" an für Port 465, aus für Port 587 mit STARTTLS.
+
+**Telegram** braucht einen eigenen Bot: bei
+[@BotFather](https://t.me/BotFather) mit `/newbot` anlegen, den Token
+eintragen, dem Bot einmal schreiben und die Chat-ID hinterlegen. Für eine
+Gruppe beginnt die ID mit einem Minus.
+
+**Webhook** schickt einen `POST` mit JSON — passt direkt auf
+Home-Assistant-Webhooks, ntfy oder Gotify:
 
 ```json
 {
+  "subject": "[USV] Warnung: Batteriebetrieb — nas/rack",
+  "message": "Netzstrom ausgefallen — Gerät läuft auf Batterie\n\nGerät: …",
   "device": "nas/rack",
-  "model": "5PX 1500",
   "rule": "on_battery",
-  "title": "Batteriebetrieb",
   "state": "raised",
   "severity": "serious",
-  "message": "Netzstrom ausgefallen — Gerät läuft auf Batterie",
   "value": 96,
   "status": "OB DISCHRG",
   "timestamp": "2026-08-05T18:30:32.664Z"
 }
 ```
 
-Das passt direkt auf Home-Assistant-Webhooks, ntfy oder Gotify.
+### Protokoll ausgeführter Befehle
+
+Jeder `INSTCMD` und jede geänderte Variable wird mit Benutzernamen im
+Ereignisprotokoll festgehalten — auch abgelehnte Versuche, samt Begründung des
+NUT-Servers. Befehle, die den Ausgang abschalten (`shutdown.*`, `load.off`,
+`bypass.*`), werden mit erhöhter Stufe geführt und zusätzlich gemeldet.
+
+Diese Einträge müssen nicht bestätigt werden und zählen nicht in den Zähler
+offener Alarme.
 
 ## HTTP-API
 
@@ -228,6 +259,8 @@ verlangt ein gültiges Sitzungs-Cookie.
 | `POST` | `/api/auth/login` · `/api/auth/logout` | Anmelden, abmelden |
 | `GET` | `/api/auth/session` | aktueller Anmeldestand |
 | `POST` | `/api/auth/password` | Passwort ändern (beendet alle anderen Sitzungen) |
+| `GET` · `PUT` | `/api/notifications` | Meldewege lesen und speichern (ohne Geheimnisse) |
+| `POST` | `/api/notifications/:channel/test` | Testnachricht über einen Meldeweg |
 | `GET` | `/api/servers` | NUT-Server, ohne Passwörter |
 | `POST` | `/api/servers/test` | Verbindung probeweise aufbauen, gefundene USV zurückgeben |
 | `POST` · `PATCH` · `DELETE` | `/api/servers` · `/api/servers/:id` | anlegen, ändern, entfernen |

@@ -70,6 +70,12 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions (expires_at);
 
+CREATE TABLE IF NOT EXISTS settings (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS nut_servers (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   name       TEXT    NOT NULL UNIQUE,
@@ -105,6 +111,7 @@ interface EventRow {
   value: number | null;
   ts: number;
   acknowledged: number;
+  actor: string | null;
 }
 
 export class Store {
@@ -119,6 +126,7 @@ export class Store {
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('synchronous = NORMAL');
     this.db.exec(SCHEMA);
+    this.migrate();
 
     this.insertSample = this.db.prepare(`
       INSERT INTO samples (device_id, ts, status, charge, load, runtime,
@@ -128,9 +136,21 @@ export class Store {
     `);
 
     this.insertEvent = this.db.prepare(`
-      INSERT INTO events (device_id, rule, severity, state, message, value, ts)
-      VALUES (@device_id, @rule, @severity, @state, @message, @value, @ts)
+      INSERT INTO events (device_id, rule, severity, state, message, value, ts, actor)
+      VALUES (@device_id, @rule, @severity, @state, @message, @value, @ts, @actor)
     `);
+  }
+
+  /**
+   * `CREATE TABLE IF NOT EXISTS` never touches an existing table, so columns
+   * added after the fact need their own step for databases already in service.
+   */
+  private migrate(): void {
+    const columns = this.db.prepare('PRAGMA table_info(events)').all() as { name: string }[];
+
+    if (!columns.some((column) => column.name === 'actor')) {
+      this.db.exec('ALTER TABLE events ADD COLUMN actor TEXT');
+    }
   }
 
   /** Handed to AuthService, which owns the `users` and `sessions` tables. */
@@ -208,6 +228,7 @@ export class Store {
       message: event.message,
       value: event.value,
       ts: event.ts,
+      actor: event.actor ?? null,
     });
 
     return { ...event, id: Number(result.lastInsertRowid), acknowledged: false };
@@ -315,6 +336,32 @@ export class Store {
     return server;
   }
 
+  // ── Einstellungen ──────────────────────────────────────────────────────
+
+  /** Reads a JSON setting, or null when it was never written. */
+  setting<T>(key: string): T | null {
+    const row = this.db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
+      | { value: string }
+      | undefined;
+
+    if (!row) return null;
+
+    try {
+      return JSON.parse(row.value) as T;
+    } catch {
+      return null;
+    }
+  }
+
+  saveSetting(key: string, value: unknown): void {
+    this.db
+      .prepare(
+        `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      )
+      .run(key, JSON.stringify(value), Date.now());
+  }
+
   /** Drops samples and events older than the retention window. */
   prune(retentionDays: number): void {
     const cutoff = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
@@ -369,5 +416,6 @@ function toAlertEvent(row: EventRow): AlertEvent {
     value: row.value,
     ts: row.ts,
     acknowledged: row.acknowledged === 1,
+    actor: row.actor,
   };
 }

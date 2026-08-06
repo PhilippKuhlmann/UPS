@@ -7,8 +7,10 @@ import { AlertEngine } from './alerts.js';
 import { createApiRouter, sessionUserFor } from './api.js';
 import { AuthService } from './auth.js';
 import { loadConfig, redactConfig } from './config.js';
+import { Notifier } from './notify.js';
 import { Poller } from './poller.js';
 import { Store } from './store.js';
+import type { AlertEvent } from './types.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(here, '..', 'public');
@@ -17,7 +19,15 @@ const config = loadConfig();
 
 const store = new Store(config.dbPath);
 const auth = new AuthService(store.database, config.auth.sessionTtlMs);
-const alerts = new AlertEngine(store, config.alerts, config.webhookUrl);
+const notifier = new Notifier(store);
+
+// ALERT_WEBHOOK_URL belegt den Webhook einmalig vor; danach zählt die Oberfläche.
+if (config.webhookUrl && store.setting('notifications') === null) {
+  notifier.save({ webhook: { enabled: true, url: config.webhookUrl } });
+  console.log('Webhook aus der Konfiguration übernommen.');
+}
+
+const alerts = new AlertEngine(store, config.alerts, notifier);
 
 // The database owns the server list. NUT_HOST / NUT_SERVERS only seed it on the
 // very first start; after that, servers are managed through the interface.
@@ -69,7 +79,20 @@ if (config.auth.enabled) {
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', true);
-app.use('/api', createApiRouter({ config, poller, store, alerts, auth, reloadServers }));
+app.use(
+  '/api',
+  createApiRouter({
+    config,
+    poller,
+    store,
+    alerts,
+    auth,
+    notifier,
+    reloadServers,
+    // `broadcast` ist eine Funktionsdeklaration und beim Aufruf längst bereit.
+    publishEvent: (event: AlertEvent) => broadcast({ type: 'event', event }),
+  }),
+);
 // ETags rather than a max-age: an updated container must not serve stale assets.
 app.use(express.static(publicDir, { maxAge: 0, etag: true, index: 'index.html' }));
 app.get('/healthz', (_req, res) => res.json({ ok: true, devices: poller.snapshots().length }));

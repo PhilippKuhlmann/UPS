@@ -793,6 +793,81 @@ code {
   white-space: nowrap;
 }
 
+/* Wer den Befehl ausgelöst hat — nur bei Protokolleinträgen gesetzt. */
+.event-row__actor {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--signal);
+  margin-left: 0.4rem;
+  white-space: nowrap;
+}
+
+/* ── Meldewege ────────────────────────────────────────────────────────── */
+
+.channel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.channel {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+  padding: 1.1rem;
+}
+
+.channel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+  flex-wrap: wrap;
+}
+
+.channel__title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* In einer Feldspalte darf die Beschriftung umbrechen, sonst läuft sie ins
+   Nachbarfeld. */
+.field .switch {
+  white-space: normal;
+  align-items: flex-start;
+}
+
+.switch input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--signal);
+  cursor: pointer;
+  flex: none;
+}
+
+.switch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+select.field__input {
+  cursor: pointer;
+}
+
 /* ── Diagramme ────────────────────────────────────────────────────────── */
 
 .chart-grid {

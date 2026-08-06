@@ -2,10 +2,11 @@ import express, { type NextFunction, type Request, type Response, type Router } 
 import type { AlertEngine } from './alerts.js';
 import { AUTH_COOKIE, AuthError, readCookie, serializeCookie, type AuthService, type SessionUser } from './auth.js';
 import { redactConfig, type AppConfig } from './config.js';
+import { messageForEvent, redactSettings, type ChannelName, type Notifier } from './notify.js';
 import { withNutConnection } from './nut/client.js';
 import type { Poller } from './poller.js';
 import type { Store } from './store.js';
-import type { NutServerPublic, NutServerRecord } from './types.js';
+import type { AlertEvent, NutServerPublic, NutServerRecord } from './types.js';
 
 const RANGE_MS: Record<string, number> = {
   '1h': 60 * 60 * 1000,
@@ -21,8 +22,20 @@ export interface ApiDeps {
   store: Store;
   alerts: AlertEngine;
   auth: AuthService;
+  notifier: Notifier;
   /** Re-reads the server table and hands it to the poller. */
   reloadServers: () => void;
+  /** Pushes a newly recorded event to every open browser. */
+  publishEvent: (event: AlertEvent) => void;
+}
+
+/**
+ * Commands that take power away from the load. They are recorded with a higher
+ * severity and — unlike ordinary commands — are worth a notification.
+ */
+function isDisruptiveCommand(command: string): boolean {
+  if (command === 'shutdown.stop') return false;
+  return /^(shutdown\.|load\.off|bypass\.)/.test(command);
 }
 
 /** Server names become part of every device id, so they stay simple. */
@@ -91,11 +104,52 @@ export function sessionUserFor(auth: AuthService, cookieHeader: string | undefin
   return token ? auth.userForToken(token) : null;
 }
 
-export function createApiRouter({ config, poller, store, alerts, auth, reloadServers }: ApiDeps): Router {
+export function createApiRouter({
+  config,
+  poller,
+  store,
+  alerts,
+  auth,
+  notifier,
+  reloadServers,
+  publishEvent,
+}: ApiDeps): Router {
   const router = express.Router();
   router.use(express.json({ limit: '32kb' }));
 
   const deviceId = (req: Request) => `${req.params.server}/${req.params.ups}`;
+
+  /**
+   * Writes an entry to the audit trail so every command and every changed
+   * variable stays traceable to the account that triggered it.
+   */
+  function record(entry: {
+    deviceId: string;
+    rule: 'command' | 'variable';
+    severity: 'good' | 'warning' | 'serious';
+    message: string;
+    actor: string;
+    title: string;
+    notify: boolean;
+  }): void {
+    const event = store.addEvent({
+      deviceId: entry.deviceId,
+      rule: entry.rule,
+      severity: entry.severity,
+      state: 'executed',
+      message: entry.message,
+      value: null,
+      ts: Date.now(),
+      actor: entry.actor,
+    });
+
+    console.log(`[audit] ${entry.actor} · ${entry.deviceId} · ${entry.message}`);
+    publishEvent(event);
+
+    if (entry.notify && notifier.shouldSend(event)) {
+      void notifier.notify(messageForEvent(event, entry.title, poller.snapshot(entry.deviceId)));
+    }
+  }
 
   function setSessionCookie(res: Response, token: string): void {
     res.setHeader(
@@ -235,27 +289,69 @@ export function createApiRouter({ config, poller, store, alerts, auth, reloadSer
     });
   });
 
-  router.post('/devices/:server/:ups/command', async (req, res) => {
+  router.post('/devices/:server/:ups/command', async (req: AuthedRequest, res) => {
     const command = typeof req.body?.command === 'string' ? req.body.command.trim() : '';
     if (!command) return badRequest(res, 'Feld "command" fehlt');
 
+    const id = deviceId(req);
+    const actor = req.sessionUser?.username ?? 'unbekannt';
+    const disruptive = isDisruptiveCommand(command);
+
     try {
-      await poller.runCommand(deviceId(req), command);
+      await poller.runCommand(id, command);
+
+      record({
+        deviceId: id,
+        rule: 'command',
+        severity: disruptive ? 'serious' : 'good',
+        message: `Befehl „${command}" ausgeführt`,
+        actor,
+        title: 'Befehl ausgeführt',
+        notify: disruptive,
+      });
+
       res.json({ ok: true, command });
     } catch (error) {
-      res.status(502).json({ error: (error as Error).message });
+      const reason = (error as Error).message;
+
+      // Abgelehnte Versuche gehören genauso ins Protokoll wie erfolgreiche.
+      record({
+        deviceId: id,
+        rule: 'command',
+        severity: 'warning',
+        message: `Befehl „${command}" abgelehnt: ${reason}`,
+        actor,
+        title: 'Befehl abgelehnt',
+        notify: false,
+      });
+
+      res.status(502).json({ error: reason });
     }
   });
 
-  router.post('/devices/:server/:ups/variable', async (req, res) => {
+  router.post('/devices/:server/:ups/variable', async (req: AuthedRequest, res) => {
     const name = typeof req.body?.name === 'string' ? req.body.name.trim() : '';
     const value = req.body?.value;
 
     if (!name) return badRequest(res, 'Feld "name" fehlt');
     if (typeof value !== 'string') return badRequest(res, 'Feld "value" muss ein String sein');
 
+    const id = deviceId(req);
+    const actor = req.sessionUser?.username ?? 'unbekannt';
+
     try {
-      await poller.setVariable(deviceId(req), name, value);
+      await poller.setVariable(id, name, value);
+
+      record({
+        deviceId: id,
+        rule: 'variable',
+        severity: 'good',
+        message: `${name} auf „${value}" gesetzt`,
+        actor,
+        title: 'Variable geändert',
+        notify: false,
+      });
+
       res.json({ ok: true, name, value });
     } catch (error) {
       res.status(502).json({ error: (error as Error).message });
@@ -285,6 +381,30 @@ export function createApiRouter({ config, poller, store, alerts, auth, reloadSer
 
   router.get('/config', (_req, res) => {
     res.json(redactConfig(config));
+  });
+
+  // ── Meldewege ───────────────────────────────────────────────────────────
+
+  router.get('/notifications', (_req, res) => {
+    res.json(redactSettings(notifier.settings()));
+  });
+
+  router.put('/notifications', (req, res) => {
+    if (typeof req.body !== 'object' || req.body === null) {
+      return badRequest(res, 'Ungültige Einstellungen');
+    }
+
+    res.json(redactSettings(notifier.save(req.body)));
+  });
+
+  router.post('/notifications/:channel/test', async (req, res) => {
+    const channel = req.params.channel as ChannelName;
+    if (!['webhook', 'email', 'telegram'].includes(channel)) {
+      return badRequest(res, `Unbekannter Meldeweg "${req.params.channel}"`);
+    }
+
+    const result = await notifier.test(channel, req.body ?? {});
+    res.status(result.ok ? 200 : 502).json(result);
   });
 
   // ── NUT servers ─────────────────────────────────────────────────────────

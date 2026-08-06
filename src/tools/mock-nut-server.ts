@@ -25,7 +25,16 @@ const devices: MockDevice[] = [
   {
     name: 'rack',
     description: 'Eaton 5PX 1500 im Serverschrank',
-    commands: ['beeper.disable', 'beeper.enable', 'test.battery.start.quick', 'test.battery.stop'],
+    commands: [
+      'beeper.disable',
+      'beeper.enable',
+      'test.battery.start.quick',
+      'test.battery.stop',
+      // Bewusst dabei, damit sich der Weg für heikle Befehle testen lässt,
+      // ohne echte Hardware abzuschalten.
+      'load.off',
+      'shutdown.reboot',
+    ],
     writable: ['ups.delay.shutdown', 'ups.delay.start'],
     vars: {
       'device.type': 'ups',

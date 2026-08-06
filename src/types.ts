@@ -47,12 +47,17 @@ export interface AlertEvent {
   deviceId: string;
   rule: string;
   severity: Severity;
-  /** `raised` when the condition started, `cleared` when it ended. */
-  state: 'raised' | 'cleared';
+  /**
+   * `raised` when a condition started, `cleared` when it ended, `executed` for
+   * an entry in the audit trail — a command or a variable someone changed.
+   */
+  state: 'raised' | 'cleared' | 'executed';
   message: string;
   value: number | null;
   ts: number;
   acknowledged: boolean;
+  /** Username behind an `executed` entry; null for anything the poller found. */
+  actor: string | null;
 }
 
 /** A NUT server as stored in the database — the source of truth at runtime. */

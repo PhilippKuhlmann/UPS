@@ -2,6 +2,7 @@ import { api, authEvents, connectLiveFeed } from './api.js';
 import { createChart } from './chart.js';
 import { createDiagram } from './diagram.js';
 import { renderAccount, renderLogin, renderPasswordChange } from './gate.js';
+import { renderNotifications } from './notifications.js';
 import { renderServers } from './servers.js';
 import {
   clockTime,
@@ -630,20 +631,23 @@ function renderEvents(container) {
                <p class="empty-state__text">Es gab bisher keinen Alarm. Neue Ereignisse erscheinen hier, sobald eine Regel greift.</p>
              </div></div>`
           : events
-              .map(
-                (event) => `<div class="event-row" data-severity="${event.severity}">
+              .map((event) => {
+                // Nur offene Alarme wollen bestätigt werden; Entwarnungen und
+                // Protokolleinträge sind keine offenen Punkte.
+                const braucht = !event.acknowledged && event.state === 'raised';
+
+                return `<div class="event-row" data-severity="${event.severity}">
                   <span class="event-row__time">${escapeHtml(dateTime(event.ts))}</span>
                   <span>
                     <span class="event-row__title">${event.state === 'cleared' ? 'Ende · ' : ''}${escapeHtml(ruleTitle(event.rule))}</span>
                     <span class="event-row__message"> ${escapeHtml(event.message)}</span>
+                    ${event.actor ? `<span class="event-row__actor">durch ${escapeHtml(event.actor)}</span>` : ''}
                   </span>
-                  <span class="event-row__device">${escapeHtml(event.deviceId)}${event.acknowledged || event.state === 'cleared' ? '' : ' ·'} ${
-                    event.acknowledged || event.state === 'cleared'
-                      ? ''
-                      : `<button class="command" type="button" data-ack="${event.id}">bestätigen</button>`
+                  <span class="event-row__device">${escapeHtml(event.deviceId)}${braucht ? ' · ' : ''}${
+                    braucht ? `<button class="command" type="button" data-ack="${event.id}">bestätigen</button>` : ''
                   }</span>
-                </div>`,
-              )
+                </div>`;
+              })
               .join('')
       }
     `;
@@ -676,6 +680,8 @@ const RULE_TITLES = {
   replace_battery: 'Batterie tauschen',
   bypass: 'Bypass aktiv',
   temperature_high: 'Temperatur hoch',
+  command: 'Befehl',
+  variable: 'Variable',
 };
 
 function ruleTitle(rule) {
@@ -696,6 +702,8 @@ function route() {
     view = renderDevice(main, `${decodeURIComponent(deviceMatch[1])}/${decodeURIComponent(deviceMatch[2])}`);
   } else if (hash.startsWith('#/events')) {
     view = renderEvents(main);
+  } else if (hash.startsWith('#/meldungen')) {
+    view = renderNotifications(main);
   } else if (hash.startsWith('#/konto')) {
     view = renderAccount(main, {
       user: state.user,

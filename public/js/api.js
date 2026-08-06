@@ -68,6 +68,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ name, value }),
     }),
+  notifications: () => request('/api/notifications'),
+  saveNotifications: (patch) =>
+    request('/api/notifications', { method: 'PUT', body: JSON.stringify(patch) }),
+  testNotification: (channel, config) =>
+    request(`/api/notifications/${channel}/test`, { method: 'POST', body: JSON.stringify(config) }),
   servers: () => request('/api/servers'),
   testServer: (server) => request('/api/servers/test', { method: 'POST', body: JSON.stringify(server) }),
   createServer: (server) => request('/api/servers', { method: 'POST', body: JSON.stringify(server) }),

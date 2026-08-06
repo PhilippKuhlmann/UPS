@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events';
 import type { AlertThresholds } from './config.js';
+import { messageForEvent, type Notifier } from './notify.js';
 import type { Store } from './store.js';
 import type { AlertEvent, DeviceSnapshot, Severity } from './types.js';
 
@@ -157,14 +158,14 @@ export interface ActiveAlert {
 export class AlertEngine extends EventEmitter {
   private readonly store: Store;
   private readonly thresholds: AlertThresholds;
-  private readonly webhookUrl: string | undefined;
+  private readonly notifier: Notifier;
   private readonly active = new Map<string, ActiveAlert>();
 
-  constructor(store: Store, thresholds: AlertThresholds, webhookUrl?: string | undefined) {
+  constructor(store: Store, thresholds: AlertThresholds, notifier: Notifier) {
     super();
     this.store = store;
     this.thresholds = thresholds;
-    this.webhookUrl = webhookUrl;
+    this.notifier = notifier;
   }
 
   activeAlerts(): ActiveAlert[] {
@@ -219,40 +220,20 @@ export class AlertEngine extends EventEmitter {
       message,
       value: value ?? null,
       ts: snapshot.updatedAt,
+      actor: null,
     });
 
     this.emit('alert', event);
-    void this.notify(event, rule, snapshot);
+
+    if (this.notifier.shouldSend(event)) {
+      void this.notifier.notify(messageForEvent(event, rule.title, snapshot));
+    }
+
     return event;
   }
-
-  private async notify(event: AlertEvent, rule: Rule, snapshot: DeviceSnapshot): Promise<void> {
-    if (!this.webhookUrl) return;
-
-    try {
-      const response = await fetch(this.webhookUrl, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          device: snapshot.id,
-          model: snapshot.model,
-          rule: rule.key,
-          title: rule.title,
-          state: event.state,
-          severity: event.severity,
-          message: event.message,
-          value: event.value,
-          status: snapshot.statusFlags.join(' '),
-          timestamp: new Date(event.ts).toISOString(),
-        }),
-        signal: AbortSignal.timeout(10_000),
-      });
-
-      if (!response.ok) {
-        console.warn(`[alerts] webhook responded ${response.status}`);
-      }
-    } catch (error) {
-      console.warn(`[alerts] webhook failed: ${(error as Error).message}`);
-    }
-  }
 }
+
+/** Titles by rule key, so other modules can label an event the same way. */
+export const RULE_TITLES: Record<string, string> = Object.fromEntries(
+  RULES.map((rule) => [rule.key, rule.title]),
+);

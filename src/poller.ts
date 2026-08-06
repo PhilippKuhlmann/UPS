@@ -162,7 +162,18 @@ export class Poller extends EventEmitter {
         this.snapshotsById.set(snapshot.id, snapshot);
       }
 
-      this.emit('poll', snapshots);
+      // Eine Abfrage, die beim Entfernen eines Servers schon lief, liefert
+      // dessen Geräte noch nach. Was zu keinem konfigurierten Server mehr
+      // gehört, fliegt hier raus.
+      const configured = new Set(this.servers.map((server) => server.config.name));
+      for (const id of [...this.snapshotsById.keys()]) {
+        if (!configured.has(id.slice(0, id.indexOf('/')))) this.snapshotsById.delete(id);
+      }
+
+      this.emit(
+        'poll',
+        snapshots.filter((snapshot) => configured.has(snapshot.serverName)),
+      );
     } finally {
       this.polling = false;
     }
