@@ -34,7 +34,23 @@ Die App spricht das NUT-Netzwerkprotokoll direkt über TCP 3493 — es muss kein
 - **Alle Variablen & Steuerung** — vollständige NUT-Variablenliste mit Filter,
   `INSTCMD`-Befehle (Signalton, Batterietest, …) und Schreiben beschreibbarer
   Variablen. Befehle, die Strom wegnehmen, brauchen einen zweiten Klick.
-- Mehrere NUT-Server gleichzeitig, hell/dunkel, tastaturbedienbar, mobiltauglich.
+- Mehrere NUT-Server gleichzeitig, tastaturbedienbar, mobiltauglich.
+
+## Aussehen
+
+Die Oberfläche übernimmt die visuelle Linie von [dokuvault.de](https://dokuvault.de):
+dunkle Blaugrau-Flächen, ein einziges kräftiges Signalblau, 46-px-Blueprint-Raster,
+Space Grotesk für Überschriften, Inter für Fließtext, IBM Plex Mono für Messwerte.
+Wie dort gibt es nur das dunkle Schema.
+
+Das Raster liegt hinter dem Einliniendiagramm — für einen Schaltplan genau das
+richtige Papier. Die Schriften liegen unter `public/fonts/` lokal bei (rund 91 KB,
+SIL Open Font License), damit nichts von externen Servern nachgeladen wird.
+
+Die Farben der Verlaufsdiagramme sind gegen die Panelfläche geprüft
+(Helligkeitsband, Chroma, Farbfehlsichtigkeit, Kontrast) und bewusst von den
+Zustandsfarben getrennt, damit „grün" im Diagramm nie mit „alles in Ordnung"
+verwechselt wird.
 
 ## Schnellstart
 

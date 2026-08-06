@@ -1,91 +1,86 @@
 /*
- * Visual direction: an electrical one-line diagram sheet. Monospace is the
- * primary face (the silkscreen of a switchgear panel), the surface is a cool
- * printed-paper grey, and the only saturated colour on screen belongs to a
- * conductor that is actually carrying current.
+ * Visuelle Linie: übernommen von dokuvault.de — dunkle Blaugrau-Flächen,
+ * ein einziges kräftiges Signalblau, 46-px-Blueprint-Raster, Space Grotesk
+ * für Überschriften, Inter für Fließtext, IBM Plex Mono für Messwerte und
+ * Etiketten. Die Schriften liegen lokal bei, damit die App ohne Internet
+ * funktioniert.
  */
 
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/inter.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/space-grotesk.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-mono-500.woff2') format('woff2');
+}
+
 :root {
-  color-scheme: light;
-
-  --paper: #f2f2ee;
-  --panel: #fbfbf9;
-  --sunken: #e8e9e3;
-  --ink: #14161a;
-  --ink-2: #565b5f;
-  --ink-3: #83888b;
-  --rule: #d3d5cd;
-  --rule-strong: #b3b6ac;
-
-  --good: #14704b;
-  --warning: #8a6200;
-  --serious: #a24a08;
-  --critical: #a81e14;
-
-  --series-charge: #0a8a55;
-  --series-load: #2f5fd0;
-  --series-voltage: #a85c00;
-
-  --dead: #a5a9a0;
-  --shadow: 0 1px 2px rgba(20, 22, 26, 0.06), 0 8px 24px -18px rgba(20, 22, 26, 0.4);
-
-  --mono: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-
-  --gutter: clamp(1rem, 3vw, 2rem);
-  --radius: 3px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme="light"])) {
-    color-scheme: dark;
-
-    --paper: #131513;
-    --panel: #191b19;
-    --sunken: #101210;
-    --ink: #edeee9;
-    --ink-2: #a9aea6;
-    --ink-3: #7c817a;
-    --rule: #2c302c;
-    --rule-strong: #424740;
-
-    --good: #4fa97e;
-    --warning: #c79a2e;
-    --serious: #dc7a3a;
-    --critical: #e5645c;
-
-    --series-charge: #35a26e;
-    --series-load: #6084f0;
-    --series-voltage: #c17d1c;
-
-    --dead: #4c514b;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -18px rgba(0, 0, 0, 0.9);
-  }
-}
-
-:root[data-theme="dark"] {
   color-scheme: dark;
 
-  --paper: #131513;
-  --panel: #191b19;
-  --sunken: #101210;
-  --ink: #edeee9;
-  --ink-2: #a9aea6;
-  --ink-3: #7c817a;
-  --rule: #2c302c;
-  --rule-strong: #424740;
+  --ink: #0b0e14;
+  --panel: #12161f;
+  --panel-2: #171c27;
+  --line: rgba(148, 163, 184, 0.14);
+  --line-strong: rgba(148, 163, 184, 0.28);
+  --text: #e6ebf2;
+  --muted: #9aa4b6;
+  --muted-2: #7b87a0;
 
-  --good: #4fa97e;
-  --warning: #c79a2e;
-  --serious: #dc7a3a;
-  --critical: #e5645c;
+  --signal: #4ea1ff;
+  --signal-soft: rgba(78, 161, 255, 0.14);
 
-  --series-charge: #35a26e;
-  --series-load: #6084f0;
-  --series-voltage: #c17d1c;
+  /* Zustandsfarben. „serious" liegt zwischen warn und crit und ergänzt die
+     drei Stufen von dokuvault.de um die vierte, die die USV kennt. */
+  --ok: #35c08a;
+  --warn: #e5a93b;
+  --serious: #e8834a;
+  --crit: #e5644e;
 
-  --dead: #4c514b;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -18px rgba(0, 0, 0, 0.9);
+  /* Diagrammfarben: gegen die Panelfläche #12161f geprüft (Helligkeitsband,
+     Chroma, Farbfehlsichtigkeit, Kontrast) — nicht aus den Zustandsfarben
+     entliehen. */
+  --series-load: #4090e4;
+  --series-charge: #3ca57e;
+  --series-voltage: #c07f34;
+
+  --dead: #3c4453;
+
+  --radius: 8px;
+  --radius-lg: 14px;
+  --container: 1160px;
+  --gutter: clamp(1rem, 3vw, 2rem);
+  --grid-size: 46px;
+  --grid-line: rgba(148, 163, 184, 0.07);
+
+  --font-display: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 18px 40px -28px rgba(0, 0, 0, 0.9);
 }
 
 *,
@@ -94,8 +89,8 @@
   box-sizing: border-box;
 }
 
-/* Layout rules below set `display`, which would otherwise beat the UA rule for
-   the hidden attribute. */
+/* Layoutregeln setzen `display` und würden sonst die UA-Regel für das
+   hidden-Attribut schlagen. */
 [hidden] {
   display: none !important;
 }
@@ -106,12 +101,11 @@ html {
 
 body {
   margin: 0;
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.5;
-  font-variant-numeric: tabular-nums;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -140,10 +134,16 @@ a {
   color: inherit;
 }
 
+code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  color: var(--muted);
+}
+
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--signal);
   outline-offset: 2px;
-  border-radius: 1px;
+  border-radius: 3px;
 }
 
 .skip-link {
@@ -152,6 +152,7 @@ a {
   top: 0;
   background: var(--panel);
   padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
   z-index: 20;
 }
 
@@ -160,23 +161,23 @@ a {
   top: 0.5rem;
 }
 
-/* ── Masthead ─────────────────────────────────────────────────────────── */
+/* ── Kopfzeile ────────────────────────────────────────────────────────── */
 
 .masthead {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: color-mix(in srgb, var(--paper) 88%, transparent);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--rule);
+  background: rgba(11, 14, 20, 0.78);
+  backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid var(--line);
 }
 
 .masthead__inner {
-  max-width: 1240px;
+  max-width: var(--container);
   margin: 0 auto;
-  padding: 0.85rem var(--gutter) 0.7rem;
+  padding: 0.9rem var(--gutter) 0.7rem;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
@@ -188,111 +189,114 @@ a {
   gap: 0.7rem;
 }
 
-/* A bolt cut out of a graphite square — the same mark as the favicon. */
 .masthead__mark {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius);
-  background: var(--ink);
+  background: var(--signal-soft);
+  border: 1px solid var(--line-strong);
   flex: none;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   position: relative;
 }
 
 .masthead__mark::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
-  background: var(--series-charge);
-  clip-path: polygon(56% 12%, 28% 56%, 47% 56%, 41% 88%, 69% 44%, 50% 44%);
+  background: var(--signal);
+  clip-path: polygon(56% 14%, 28% 56%, 47% 56%, 41% 86%, 69% 44%, 50% 44%);
 }
 
 .masthead__title {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .masthead__subtitle {
-  font-size: 11px;
-  color: var(--ink-3);
-  letter-spacing: 0.04em;
+  font-size: 12.5px;
+  color: var(--muted-2);
 }
 
 .masthead__controls {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .tabs {
   display: flex;
-  border: 1px solid var(--rule);
+  gap: 0.25rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  overflow: hidden;
+  padding: 3px;
 }
 
 .tab {
-  padding: 0.35rem 0.8rem;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
   text-decoration: none;
-  color: var(--ink-2);
-  background: var(--panel);
+  color: var(--muted);
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  white-space: nowrap;
 }
 
-.tab + .tab {
-  border-left: 1px solid var(--rule);
+.tab:hover {
+  color: var(--text);
+  background: var(--panel-2);
 }
 
-.tab[aria-current="page"] {
-  background: var(--ink);
-  color: var(--paper);
+.tab[aria-current='page'] {
+  background: var(--signal-soft);
+  color: var(--signal);
 }
 
 .tab__badge {
-  background: var(--critical);
-  color: #fff;
+  background: var(--crit);
+  color: #0b0e14;
   border-radius: 999px;
-  padding: 0 0.35rem;
-  font-size: 10px;
-  line-height: 1.5;
+  padding: 0 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
 }
 
 .icon-button {
-  border: 1px solid var(--rule);
+  border: 1px solid var(--line);
   background: var(--panel);
   border-radius: var(--radius);
-  padding: 0.35rem 0.6rem;
+  padding: 0.4rem 0.7rem;
   cursor: pointer;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
 }
 
 .icon-button:hover {
-  color: var(--ink);
-  border-color: var(--rule-strong);
+  color: var(--text);
+  border-color: var(--line-strong);
 }
 
-/* The live link strip: a hairline that reports the websocket, not decoration. */
+/* Der Live-Streifen berichtet über die Websocket-Verbindung. */
 .masthead__link {
-  max-width: 1240px;
+  max-width: var(--container);
   margin: 0 auto;
-  padding: 0 var(--gutter) 0.55rem;
+  padding: 0 var(--gutter) 0.6rem;
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--muted-2);
 }
 
 .masthead__link-dot {
@@ -302,24 +306,25 @@ a {
   background: var(--dead);
 }
 
-.masthead__link[data-state="live"] .masthead__link-dot {
-  background: var(--good);
+.masthead__link[data-state='live'] .masthead__link-dot {
+  background: var(--ok);
+  box-shadow: 0 0 0 3px rgba(53, 192, 138, 0.16);
 }
 
-.masthead__link[data-state="lost"] .masthead__link-dot {
-  background: var(--critical);
+.masthead__link[data-state='lost'] .masthead__link-dot {
+  background: var(--crit);
 }
 
-.masthead__link[data-state="lost"] {
-  color: var(--critical);
+.masthead__link[data-state='lost'] {
+  color: var(--crit);
 }
 
 /* ── Layout ───────────────────────────────────────────────────────────── */
 
 .main {
-  max-width: 1240px;
+  max-width: var(--container);
   margin: 0 auto;
-  padding: 1.5rem var(--gutter) 4rem;
+  padding: 1.6rem var(--gutter) 4rem;
 }
 
 .section-head {
@@ -332,32 +337,34 @@ a {
 }
 
 .eyebrow {
-  font-size: 10px;
-  letter-spacing: 0.16em;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--muted-2);
 }
 
 .section-title {
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .device-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 26rem), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 27rem), 1fr));
 }
 
-/* ── Panels ───────────────────────────────────────────────────────────── */
+/* ── Flächen ──────────────────────────────────────────────────────────── */
 
 .panel {
   background: var(--panel);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
 .panel + .panel {
@@ -365,19 +372,20 @@ a {
 }
 
 .panel__head {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--rule);
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .panel__body {
-  padding: 1rem;
+  padding: 1.1rem;
 }
 
-/* ── Device card ──────────────────────────────────────────────────────── */
+/* ── Gerätekarte ──────────────────────────────────────────────────────── */
 
 .device {
   display: flex;
@@ -386,83 +394,93 @@ a {
   width: 100%;
   cursor: pointer;
   padding: 0;
-  font-family: inherit;
   text-decoration: none;
   color: inherit;
-  transition: border-color 120ms ease;
+  transition: border-color 140ms ease, transform 140ms ease;
 }
 
 .device:hover {
-  border-color: var(--rule-strong);
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
 }
 
 .device__head {
-  padding: 0.85rem 1rem 0.7rem;
+  padding: 0.95rem 1.1rem 0.8rem;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--line);
 }
 
 .device__name {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .device__meta {
-  font-family: var(--sans);
-  font-size: 12px;
-  color: var(--ink-2);
-  margin-top: 0.15rem;
+  font-size: 12.5px;
+  color: var(--muted-2);
+  margin-top: 0.1rem;
 }
 
+/* Statusplakette in der Pillenform von dokuvault.de. */
 .status-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.2rem 0.5rem;
+  padding: 0.25rem 0.6rem;
   border: 1px solid currentColor;
-  border-radius: var(--radius);
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
   white-space: nowrap;
   flex: none;
 }
 
 .status-chip__glyph {
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1;
 }
 
-.status-chip[data-severity="good"] {
-  color: var(--good);
+.status-chip[data-severity='good'] {
+  color: var(--ok);
+  background: rgba(53, 192, 138, 0.1);
 }
-.status-chip[data-severity="warning"] {
-  color: var(--warning);
+.status-chip[data-severity='warning'] {
+  color: var(--warn);
+  background: rgba(229, 169, 59, 0.1);
 }
-.status-chip[data-severity="serious"] {
+.status-chip[data-severity='serious'] {
   color: var(--serious);
+  background: rgba(232, 131, 74, 0.1);
 }
-.status-chip[data-severity="critical"] {
-  color: var(--critical);
+.status-chip[data-severity='critical'] {
+  color: var(--crit);
+  background: rgba(229, 100, 78, 0.1);
 }
 
+/* Das Blueprint-Raster von dokuvault.de liegt hinter dem Schaltplan — für ein
+   Einliniendiagramm genau das richtige Papier. */
 .device__diagram {
-  padding: 0.6rem 1rem 0.2rem;
+  padding: 0.9rem 1.1rem 0.5rem;
+  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: var(--grid-size) var(--grid-size), var(--grid-size) var(--grid-size);
 }
 
 .device__readouts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
-  border-top: 1px solid var(--rule);
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  border-top: 1px solid var(--line);
 }
 
 .readout {
-  padding: 0.6rem 0.9rem 0.75rem;
-  border-right: 1px solid var(--rule);
+  padding: 0.7rem 1rem 0.8rem;
+  border-right: 1px solid var(--line);
   min-width: 0;
 }
 
@@ -471,45 +489,46 @@ a {
 }
 
 .readout__label {
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--muted-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .readout__value {
+  font-family: var(--font-mono);
   font-size: 22px;
   font-weight: 500;
-  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
   margin-top: 0.15rem;
-  line-height: 1.15;
+  line-height: 1.2;
 }
 
 .readout__unit {
-  font-size: 12px;
-  color: var(--ink-2);
+  font-size: 12.5px;
+  color: var(--muted);
   margin-left: 0.15em;
 }
 
 .readout--muted .readout__value {
-  color: var(--ink-3);
+  color: var(--muted-2);
 }
 
 .device__error {
-  padding: 0.7rem 1rem;
-  border-top: 1px solid var(--rule);
-  color: var(--critical);
+  padding: 0.75rem 1.1rem;
+  border-top: 1px solid var(--line);
+  color: var(--crit);
+  font-family: var(--font-mono);
   font-size: 12px;
   word-break: break-word;
 }
 
-/* ── One-line diagram (the signature element) ─────────────────────────── */
+/* ── Einliniendiagramm ────────────────────────────────────────────────── */
 
-/* The drawing is a schematic, not a banner — it stops growing past its natural
-   size so the detail view does not turn it into wall art. */
 .oneline {
   width: 100%;
   max-width: 620px;
@@ -519,23 +538,25 @@ a {
 }
 
 .oneline__node-box {
-  fill: var(--sunken);
-  stroke: var(--rule-strong);
+  fill: var(--panel-2);
+  stroke: var(--line-strong);
   stroke-width: 1;
+  rx: 8;
 }
 
 .oneline__node-label {
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   font-size: 10px;
-  letter-spacing: 0.14em;
-  fill: var(--ink-2);
+  letter-spacing: 0.1em;
+  fill: var(--muted-2);
   text-transform: uppercase;
 }
 
 .oneline__node-value {
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   font-size: 15px;
-  fill: var(--ink);
+  font-weight: 500;
+  fill: var(--text);
 }
 
 .oneline__base {
@@ -557,31 +578,31 @@ a {
 }
 
 .oneline__break {
-  stroke: var(--critical);
+  stroke: var(--crit);
   stroke-width: 2;
   stroke-linecap: round;
   opacity: 0;
 }
 
-/* A conductor is "live" only when current is actually flowing through it. */
-.oneline [data-live="true"] .oneline__base {
-  stroke: color-mix(in srgb, var(--live-color) 35%, transparent);
+/* Eine Leitung ist nur „live", wenn tatsächlich Strom fließt. */
+.oneline [data-live='true'] .oneline__base {
+  stroke: color-mix(in srgb, var(--live-color) 32%, transparent);
 }
 
-.oneline [data-live="true"] .oneline__flow {
+.oneline [data-live='true'] .oneline__flow {
   stroke: var(--live-color);
   animation: oneline-flow 1.1s linear infinite;
 }
 
-.oneline [data-live="true"][data-reverse="true"] .oneline__flow {
+.oneline [data-live='true'][data-reverse='true'] .oneline__flow {
   animation-direction: reverse;
 }
 
-.oneline [data-live="true"] .oneline__arrow {
+.oneline [data-live='true'] .oneline__arrow {
   fill: var(--live-color);
 }
 
-.oneline [data-hidden="true"] {
+.oneline [data-hidden='true'] {
   display: none;
 }
 
@@ -591,12 +612,12 @@ a {
   }
 }
 
-.oneline[data-path="battery"] .oneline__break {
+.oneline[data-path='battery'] .oneline__break {
   opacity: 1;
 }
 
 .oneline--mains {
-  --live-color: var(--good);
+  --live-color: var(--ok);
 }
 
 .oneline--battery {
@@ -604,7 +625,7 @@ a {
 }
 
 .oneline--bypass {
-  --live-color: var(--warning);
+  --live-color: var(--warn);
 }
 
 .oneline--off,
@@ -613,68 +634,68 @@ a {
 }
 
 .oneline__charge-color {
-  --live-color: var(--series-charge);
+  --live-color: var(--signal);
 }
 
-/* ── Alert banner & event list ────────────────────────────────────────── */
+/* ── Alarmleiste und Ereignisse ───────────────────────────────────────── */
 
 .alert-bar {
-  border: 1px solid var(--rule);
+  border: 1px solid var(--line);
   border-left-width: 3px;
   border-radius: var(--radius);
   background: var(--panel);
-  padding: 0.7rem 0.9rem;
+  padding: 0.8rem 1rem;
   display: flex;
   gap: 0.7rem;
   align-items: flex-start;
   margin-bottom: 1rem;
 }
 
-.alert-bar[data-severity="warning"] {
-  border-left-color: var(--warning);
+.alert-bar[data-severity='warning'] {
+  border-left-color: var(--warn);
 }
-.alert-bar[data-severity="serious"] {
+.alert-bar[data-severity='serious'] {
   border-left-color: var(--serious);
 }
-.alert-bar[data-severity="critical"] {
-  border-left-color: var(--critical);
+.alert-bar[data-severity='critical'] {
+  border-left-color: var(--crit);
 }
 
 .alert-bar__glyph {
   flex: none;
-  font-size: 13px;
-  line-height: 1.3;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
-.alert-bar[data-severity="warning"] .alert-bar__glyph {
-  color: var(--warning);
+.alert-bar[data-severity='warning'] .alert-bar__glyph {
+  color: var(--warn);
 }
-.alert-bar[data-severity="serious"] .alert-bar__glyph {
+.alert-bar[data-severity='serious'] .alert-bar__glyph {
   color: var(--serious);
 }
-.alert-bar[data-severity="critical"] .alert-bar__glyph {
-  color: var(--critical);
+.alert-bar[data-severity='critical'] .alert-bar__glyph {
+  color: var(--crit);
 }
 
 .alert-bar__title {
+  font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .alert-bar__text {
-  font-family: var(--sans);
   font-size: 13px;
-  color: var(--ink-2);
-  margin-top: 0.15rem;
+  color: var(--muted);
+  margin-top: 0.2rem;
 }
 
 .event-row {
   display: grid;
-  grid-template-columns: 7.5rem 1fr auto;
+  grid-template-columns: 8.5rem 1fr auto;
   gap: 0.75rem;
-  padding: 0.6rem 1rem;
-  border-bottom: 1px solid var(--rule);
+  padding: 0.7rem 1.1rem;
+  border-bottom: 1px solid var(--line);
   align-items: baseline;
 }
 
@@ -683,43 +704,45 @@ a {
 }
 
 .event-row__time {
-  font-size: 11px;
-  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--muted-2);
   white-space: nowrap;
 }
 
 .event-row__title {
+  font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.event-row[data-severity="good"] .event-row__title {
-  color: var(--good);
+.event-row[data-severity='good'] .event-row__title {
+  color: var(--ok);
 }
-.event-row[data-severity="warning"] .event-row__title {
-  color: var(--warning);
+.event-row[data-severity='warning'] .event-row__title {
+  color: var(--warn);
 }
-.event-row[data-severity="serious"] .event-row__title {
+.event-row[data-severity='serious'] .event-row__title {
   color: var(--serious);
 }
-.event-row[data-severity="critical"] .event-row__title {
-  color: var(--critical);
+.event-row[data-severity='critical'] .event-row__title {
+  color: var(--crit);
 }
 
 .event-row__message {
-  font-family: var(--sans);
   font-size: 13px;
-  color: var(--ink-2);
+  color: var(--muted);
 }
 
 .event-row__device {
-  font-size: 11px;
-  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--muted-2);
   white-space: nowrap;
 }
 
-/* ── Charts ───────────────────────────────────────────────────────────── */
+/* ── Diagramme ────────────────────────────────────────────────────────── */
 
 .chart-grid {
   display: grid;
@@ -729,10 +752,10 @@ a {
 
 .chart {
   position: relative;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--panel);
-  padding: 0.8rem 0.9rem 0.5rem;
+  background: var(--panel-2);
+  padding: 0.85rem 0.95rem 0.6rem;
 }
 
 .chart__head {
@@ -740,17 +763,18 @@ a {
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
 }
 
 .chart__title {
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--muted-2);
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
 .chart__swatch {
@@ -760,10 +784,14 @@ a {
   flex: none;
 }
 
-/* The latest value is direct-labelled so identity never rests on colour alone. */
+/* Der aktuelle Wert steht direkt dabei, damit die Zuordnung nie allein an
+   der Farbe hängt. */
 .chart__current {
+  font-family: var(--font-mono);
   font-size: 15px;
-  color: var(--ink);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
 }
 
 .chart__empty {
@@ -771,9 +799,10 @@ a {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ink-3);
+  color: var(--muted-2);
+  font-family: var(--font-mono);
   font-size: 11px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -785,19 +814,19 @@ a {
 }
 
 .chart__grid-line {
-  stroke: var(--rule);
+  stroke: var(--line);
   stroke-width: 1;
 }
 
 .chart__axis-label {
-  font-family: var(--mono);
-  font-size: 9px;
-  fill: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  fill: var(--muted-2);
 }
 
 .chart__area {
   stroke: none;
-  opacity: 0.12;
+  opacity: 0.16;
 }
 
 .chart__line {
@@ -808,14 +837,14 @@ a {
 }
 
 .chart__crosshair {
-  stroke: var(--ink-3);
+  stroke: var(--muted-2);
   stroke-width: 1;
   stroke-dasharray: 2 3;
   opacity: 0;
 }
 
 .chart__marker {
-  stroke: var(--panel);
+  stroke: var(--panel-2);
   stroke-width: 2;
   opacity: 0;
 }
@@ -829,10 +858,12 @@ a {
   position: absolute;
   pointer-events: none;
   background: var(--ink);
-  color: var(--paper);
-  border-radius: var(--radius);
-  padding: 0.3rem 0.5rem;
-  font-size: 11px;
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 0.3rem 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
   white-space: nowrap;
   transform: translate(-50%, -130%);
   opacity: 0;
@@ -845,59 +876,63 @@ a {
 }
 
 .chart__tooltip-time {
-  color: color-mix(in srgb, var(--paper) 62%, transparent);
+  color: var(--muted-2);
   margin-right: 0.4rem;
 }
 
-/* ── Range picker, tables, commands ───────────────────────────────────── */
+/* ── Zeitraumwahl, Tabellen, Befehle ──────────────────────────────────── */
 
 .range-picker {
   display: flex;
-  border: 1px solid var(--rule);
+  gap: 0.25rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  overflow: hidden;
+  padding: 3px;
 }
 
 .range-picker button {
   border: 0;
-  background: var(--panel);
-  padding: 0.25rem 0.55rem;
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-2);
+  background: transparent;
+  padding: 0.28rem 0.6rem;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
   cursor: pointer;
+  white-space: nowrap;
 }
 
-.range-picker button + button {
-  border-left: 1px solid var(--rule);
+.range-picker button:hover {
+  color: var(--text);
 }
 
-.range-picker button[aria-pressed="true"] {
-  background: var(--ink);
-  color: var(--paper);
+.range-picker button[aria-pressed='true'] {
+  background: var(--signal-soft);
+  color: var(--signal);
 }
 
 .var-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
 }
 
 .var-table th {
   text-align: left;
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--muted-2);
   font-weight: 400;
-  padding: 0 0.75rem 0.4rem;
-  border-bottom: 1px solid var(--rule);
+  padding: 0 1.1rem 0.5rem;
+  border-bottom: 1px solid var(--line);
 }
 
 .var-table td {
-  padding: 0.3rem 0.75rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--rule) 55%, transparent);
+  padding: 0.35rem 1.1rem;
+  border-bottom: 1px solid var(--line);
   vertical-align: top;
   word-break: break-word;
 }
@@ -907,26 +942,30 @@ a {
 }
 
 .var-table__name {
-  color: var(--ink-2);
+  color: var(--muted);
   width: 42%;
 }
 
 .var-table__rw {
-  color: var(--series-load);
+  color: var(--signal);
   font-size: 10px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   margin-left: 0.4rem;
 }
 
 .filter-input {
-  border: 1px solid var(--rule);
-  background: var(--panel);
-  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
+  color: var(--text);
   border-radius: var(--radius);
-  padding: 0.25rem 0.5rem;
-  font-family: var(--mono);
-  font-size: 11px;
+  padding: 0.35rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
   min-width: 11rem;
+}
+
+.filter-input:focus-visible {
+  border-color: var(--signal);
 }
 
 .command-list {
@@ -936,18 +975,19 @@ a {
 }
 
 .command {
-  border: 1px solid var(--rule);
-  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  background: var(--panel-2);
   border-radius: var(--radius);
-  padding: 0.35rem 0.65rem;
-  font-size: 11px;
+  padding: 0.4rem 0.75rem;
+  font-size: 12.5px;
+  font-weight: 500;
   cursor: pointer;
-  color: var(--ink-2);
+  color: var(--muted);
 }
 
 .command:hover:not(:disabled) {
-  border-color: var(--ink);
-  color: var(--ink);
+  border-color: var(--signal);
+  color: var(--signal);
 }
 
 .command:disabled {
@@ -961,30 +1001,28 @@ a {
 }
 
 .note {
-  font-family: var(--sans);
-  font-size: 12px;
-  color: var(--ink-3);
+  font-size: 13px;
+  color: var(--muted-2);
   margin-top: 0.6rem;
 }
 
 .empty-state {
-  border: 1px dashed var(--rule-strong);
-  border-radius: var(--radius);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-lg);
   padding: 2.5rem 1.5rem;
   text-align: center;
-  color: var(--ink-2);
+  color: var(--muted);
 }
 
 .empty-state__title {
-  font-size: 12px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .empty-state__text {
-  font-family: var(--sans);
-  font-size: 13px;
+  font-size: 13.5px;
   margin-top: 0.4rem;
 }
 
@@ -992,26 +1030,25 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted-2);
   text-decoration: none;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.9rem;
 }
 
 .back-link:hover {
-  color: var(--ink);
+  color: var(--signal);
 }
 
-/* ── Server management ────────────────────────────────────────────────── */
+/* ── Serververwaltung ─────────────────────────────────────────────────── */
 
 .server-row {
   display: flex;
   align-items: center;
   gap: 0.9rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--rule);
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid var(--line);
   flex-wrap: wrap;
 }
 
@@ -1025,15 +1062,14 @@ a {
 }
 
 .server-row__name {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 700;
 }
 
 .server-row__meta {
-  font-family: var(--sans);
-  font-size: 12px;
-  color: var(--ink-2);
+  font-size: 12.5px;
+  color: var(--muted-2);
   margin-top: 0.1rem;
 }
 
@@ -1056,42 +1092,41 @@ a {
 .server-form__actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 1.1rem;
+  margin-top: 1.2rem;
   flex-wrap: wrap;
   align-items: center;
 }
 
 .server-form__message {
-  font-family: var(--sans);
   font-size: 13px;
   margin-top: 0.9rem;
-  border-left: 3px solid var(--rule-strong);
-  padding-left: 0.6rem;
-  color: var(--ink-2);
+  border-left: 3px solid var(--line-strong);
+  padding-left: 0.7rem;
+  color: var(--muted);
 }
 
-.server-form__message[data-tone="good"] {
-  border-left-color: var(--good);
-  color: var(--good);
+.server-form__message[data-tone='good'] {
+  border-left-color: var(--ok);
+  color: var(--ok);
 }
 
-.server-form__message[data-tone="warning"] {
-  border-left-color: var(--warning);
-  color: var(--warning);
+.server-form__message[data-tone='warning'] {
+  border-left-color: var(--warn);
+  color: var(--warn);
 }
 
-.server-form__message[data-tone="error"] {
-  border-left-color: var(--critical);
-  color: var(--critical);
+.server-form__message[data-tone='error'] {
+  border-left-color: var(--crit);
+  color: var(--crit);
 }
 
-/* The empty state offers a link styled as a button. */
+/* Der Leerzustand bietet einen Link im Knopfgewand an. */
 a.command {
   text-decoration: none;
   display: inline-block;
 }
 
-/* ── Login & password gate ────────────────────────────────────────────── */
+/* ── Anmeldung und Passwort ───────────────────────────────────────────── */
 
 .gate {
   display: flex;
@@ -1102,33 +1137,32 @@ a.command {
 .gate__panel {
   width: min(100%, 26rem);
   background: var(--panel);
-  border: 1px solid var(--rule);
-  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
-  padding: 1.5rem;
+  padding: 1.6rem;
 }
 
 .gate__title {
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin-top: 0.3rem;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 0.35rem;
 }
 
 .gate__text {
-  font-family: var(--sans);
-  font-size: 13px;
-  color: var(--ink-2);
+  font-size: 13.5px;
+  color: var(--muted);
   margin-top: 0.5rem;
 }
 
 .gate__form {
-  margin-top: 1.4rem;
+  margin-top: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
-  /* Passwortfelder brauchen keine 1400 px — im Kontopanel sonst grotesk breit. */
+  gap: 0.95rem;
+  /* Passwortfelder brauchen keine 1160 px — im Kontopanel sonst grotesk breit. */
   max-width: 26rem;
 }
 
@@ -1139,57 +1173,56 @@ a.command {
 }
 
 .field__label {
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--muted-2);
 }
 
 .field__input {
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   font-size: 14px;
-  color: var(--ink);
-  background: var(--sunken);
-  border: 1px solid var(--rule-strong);
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
-  padding: 0.5rem 0.6rem;
+  padding: 0.55rem 0.7rem;
   width: 100%;
 }
 
 .field__input:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--signal);
+  box-shadow: 0 0 0 3px var(--signal-soft);
 }
 
 .field__hint {
-  font-family: var(--sans);
-  font-size: 12px;
-  color: var(--ink-3);
+  font-size: 12.5px;
+  color: var(--muted-2);
 }
 
 .gate__error {
-  font-family: var(--sans);
   font-size: 13px;
-  color: var(--critical);
-  border-left: 3px solid var(--critical);
-  padding-left: 0.6rem;
+  color: var(--crit);
+  border-left: 3px solid var(--crit);
+  padding-left: 0.7rem;
 }
 
 .button-primary {
-  border: 1px solid var(--ink);
-  background: var(--ink);
-  color: var(--paper);
+  border: 1px solid var(--signal);
+  background: var(--signal);
+  color: #08111d;
   border-radius: var(--radius);
-  padding: 0.55rem 0.9rem;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  padding: 0.6rem 1rem;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   margin-top: 0.2rem;
 }
 
 .button-primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--ink) 85%, var(--paper));
+  background: color-mix(in srgb, var(--signal) 88%, white);
 }
 
 .button-primary:disabled {
@@ -1202,18 +1235,20 @@ a.command {
   left: 50%;
   bottom: 1.5rem;
   transform: translateX(-50%);
-  background: var(--ink);
-  color: var(--paper);
-  padding: 0.5rem 0.9rem;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  padding: 0.6rem 1rem;
   border-radius: var(--radius);
-  font-size: 12px;
+  font-size: 13px;
   z-index: 30;
   max-width: min(90vw, 34rem);
+  box-shadow: var(--shadow);
 }
 
-.toast[data-tone="error"] {
-  background: var(--critical);
-  color: #fff;
+.toast[data-tone='error'] {
+  border-color: var(--crit);
+  color: var(--crit);
 }
 
 @media (max-width: 640px) {
@@ -1236,8 +1271,12 @@ a.command {
     transition-duration: 0.001ms !important;
   }
 
-  /* Without motion, a live conductor is shown as a solid line instead. */
-  .oneline [data-live="true"] .oneline__flow {
+  /* Ohne Bewegung wird eine stromführende Leitung durchgezogen gezeichnet. */
+  .oneline [data-live='true'] .oneline__flow {
     stroke-dasharray: none;
+  }
+
+  .device:hover {
+    transform: none;
   }
 }

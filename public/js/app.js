@@ -64,30 +64,6 @@ function setConnection(status) {
   connectionText.textContent = labels[status] ?? status;
 }
 
-function setupTheme() {
-  const button = document.getElementById('theme-toggle');
-  const label = document.getElementById('theme-label');
-  const modes = ['auto', 'light', 'dark'];
-  const names = { auto: 'Auto', light: 'Hell', dark: 'Dunkel' };
-
-  function apply(mode) {
-    if (mode === 'auto') {
-      delete document.documentElement.dataset.theme;
-    } else {
-      document.documentElement.dataset.theme = mode;
-    }
-    label.textContent = names[mode];
-    localStorage.setItem('ups-nut-theme', mode);
-  }
-
-  apply(localStorage.getItem('ups-nut-theme') ?? 'auto');
-
-  button.addEventListener('click', () => {
-    const currentMode = localStorage.getItem('ups-nut-theme') ?? 'auto';
-    apply(modes[(modes.indexOf(currentMode) + 1) % modes.length]);
-  });
-}
-
 let toastTimer = null;
 
 function toast(message, tone = 'info') {
@@ -876,6 +852,5 @@ logoutButton.addEventListener('click', async () => {
   showLogin();
 });
 
-setupTheme();
 setChromeVisible(false);
 void gate();
