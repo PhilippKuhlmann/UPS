@@ -64,6 +64,43 @@ function setConnection(status) {
   connectionText.textContent = labels[status] ?? status;
 }
 
+/**
+ * Farbschema. Die Vorlage von dokuvault.de ist dunkel, deshalb ist Dunkel die
+ * Vorgabe. „Auto" wird hier aufgelöst, damit das Stylesheet nur ein einziges
+ * helles Token-Set braucht.
+ */
+function setupTheme() {
+  const button = document.getElementById('theme-toggle');
+  const label = document.getElementById('theme-label');
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const modes = ['dark', 'light', 'auto'];
+  const names = { dark: 'Dunkel', light: 'Hell', auto: 'Auto' };
+  const prefersLight = window.matchMedia('(prefers-color-scheme: light)');
+
+  function apply(mode) {
+    const effective = mode === 'auto' ? (prefersLight.matches ? 'light' : 'dark') : mode;
+
+    document.documentElement.dataset.theme = effective;
+    label.textContent = names[mode];
+    button.setAttribute('aria-label', `Farbschema: ${names[mode]} — wechseln`);
+    if (meta) meta.content = effective === 'light' ? '#f5f7fa' : '#0b0e14';
+
+    localStorage.setItem('ups-nut-theme', mode);
+  }
+
+  apply(modes.includes(localStorage.getItem('ups-nut-theme')) ? localStorage.getItem('ups-nut-theme') : 'dark');
+
+  // Im Auto-Modus dem Systemwechsel folgen, ohne die Wahl zu überschreiben.
+  prefersLight.addEventListener('change', () => {
+    if ((localStorage.getItem('ups-nut-theme') ?? 'dark') === 'auto') apply('auto');
+  });
+
+  button.addEventListener('click', () => {
+    const current = localStorage.getItem('ups-nut-theme') ?? 'dark';
+    apply(modes[(modes.indexOf(current) + 1) % modes.length]);
+  });
+}
+
 let toastTimer = null;
 
 function toast(message, tone = 'info') {
@@ -852,5 +889,6 @@ logoutButton.addEventListener('click', async () => {
   showLogin();
 });
 
+setupTheme();
 setChromeVisible(false);
 void gate();

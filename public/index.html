@@ -3,8 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0b0e14" />
+    <script>
+      // Vor dem ersten Rendern setzen, sonst blitzt bei „Hell" kurz das dunkle
+      // Schema auf. app.js übernimmt danach die Umschaltung.
+      (function () {
+        var mode = localStorage.getItem('ups-nut-theme') || 'dark';
+        var effective =
+          mode === 'auto'
+            ? window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark'
+            : mode;
+        document.documentElement.dataset.theme = effective;
+      })();
+    </script>
     <meta name="description" content="Überwachung von USV-Geräten an einem NUT-Server" />
     <title>USV-Überwachung</title>
     <link rel="stylesheet" href="/css/app.css" />
@@ -33,6 +47,9 @@
             <a class="tab" data-route="#/servers" href="#/servers">Server</a>
             <a class="tab" data-route="#/konto" href="#/konto" id="tab-konto">Konto</a>
           </nav>
+          <button class="icon-button" id="theme-toggle" type="button" aria-label="Farbschema wechseln">
+            <span id="theme-label">Dunkel</span>
+          </button>
           <button class="icon-button" id="logout" type="button" hidden>Abmelden</button>
         </div>
       </div>

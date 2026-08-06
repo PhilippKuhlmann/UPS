@@ -69,6 +69,12 @@
 
   --dead: #3c4453;
 
+  /* Text auf Signal- und Kritischflächen. */
+  --on-accent: #08111d;
+  --masthead-bg: rgba(11, 14, 20, 0.78);
+  /* Gemeinsame Höhe für Reiterleiste und Knöpfe der Kopfzeile. */
+  --control-h: 38px;
+
   --radius: 8px;
   --radius-lg: 14px;
   --container: 1160px;
@@ -81,6 +87,45 @@
   --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 18px 40px -28px rgba(0, 0, 0, 0.9);
+}
+
+/*
+ * Helles Gegenstück. dokuvault.de kennt nur das dunkle Schema; die hellen Werte
+ * sind daraus abgeleitet — gleiche Farbtöne, für helle Flächen abgedunkelt.
+ * JavaScript löst „Auto" vorher auf und setzt hier immer light oder dark.
+ */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --ink: #f5f7fa;
+  --panel: #ffffff;
+  --panel-2: #f1f4f9;
+  --line: rgba(71, 85, 105, 0.16);
+  --line-strong: rgba(71, 85, 105, 0.3);
+  --text: #101827;
+  --muted: #52607a;
+  --muted-2: #6b7890;
+
+  --signal: #1f6fd0;
+  --signal-soft: rgba(31, 111, 208, 0.1);
+
+  --ok: #10794f;
+  --warn: #9a6a05;
+  --serious: #b1521f;
+  --crit: #bd3324;
+
+  /* Gegen die helle Diagrammfläche #f1f4f9 geprüft. */
+  --series-load: #1f6fd0;
+  --series-charge: #12805c;
+  --series-voltage: #9a6218;
+
+  --dead: #a7b0c0;
+  --grid-line: rgba(71, 85, 105, 0.07);
+
+  --on-accent: #ffffff;
+  --masthead-bg: rgba(245, 247, 250, 0.8);
+
+  --shadow: 0 1px 2px rgba(16, 24, 39, 0.06), 0 18px 40px -28px rgba(16, 24, 39, 0.45);
 }
 
 *,
@@ -167,7 +212,7 @@ code {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(11, 14, 20, 0.78);
+  background: var(--masthead-bg);
   backdrop-filter: saturate(1.4) blur(14px);
   border-bottom: 1px solid var(--line);
 }
@@ -228,7 +273,9 @@ code {
 
 .tabs {
   display: flex;
+  align-items: stretch;
   gap: 0.25rem;
+  height: var(--control-h);
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -236,7 +283,7 @@ code {
 }
 
 .tab {
-  padding: 0.35rem 0.75rem;
+  padding: 0 0.75rem;
   border-radius: 6px;
   font-size: 12.5px;
   font-weight: 600;
@@ -260,7 +307,7 @@ code {
 
 .tab__badge {
   background: var(--crit);
-  color: #0b0e14;
+  color: var(--on-accent);
   border-radius: 999px;
   padding: 0 0.4rem;
   font-family: var(--font-mono);
@@ -268,11 +315,15 @@ code {
   font-weight: 500;
 }
 
+/* Gleiche Höhe wie die Reiterleiste daneben. */
 .icon-button {
+  display: inline-flex;
+  align-items: center;
+  height: var(--control-h);
   border: 1px solid var(--line);
   background: var(--panel);
   border-radius: var(--radius);
-  padding: 0.4rem 0.7rem;
+  padding: 0 0.8rem;
   cursor: pointer;
   font-size: 12.5px;
   font-weight: 600;
@@ -308,7 +359,7 @@ code {
 
 .masthead__link[data-state='live'] .masthead__link-dot {
   background: var(--ok);
-  box-shadow: 0 0 0 3px rgba(53, 192, 138, 0.16);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 18%, transparent);
 }
 
 .masthead__link[data-state='lost'] .masthead__link-dot {
@@ -448,19 +499,19 @@ code {
 
 .status-chip[data-severity='good'] {
   color: var(--ok);
-  background: rgba(53, 192, 138, 0.1);
+  background: color-mix(in srgb, var(--ok) 11%, transparent);
 }
 .status-chip[data-severity='warning'] {
   color: var(--warn);
-  background: rgba(229, 169, 59, 0.1);
+  background: color-mix(in srgb, var(--warn) 11%, transparent);
 }
 .status-chip[data-severity='serious'] {
   color: var(--serious);
-  background: rgba(232, 131, 74, 0.1);
+  background: color-mix(in srgb, var(--serious) 11%, transparent);
 }
 .status-chip[data-severity='critical'] {
   color: var(--crit);
-  background: rgba(229, 100, 78, 0.1);
+  background: color-mix(in srgb, var(--crit) 11%, transparent);
 }
 
 /* Das Blueprint-Raster von dokuvault.de liegt hinter dem Schaltplan — für ein
@@ -1212,7 +1263,7 @@ a.command {
 .button-primary {
   border: 1px solid var(--signal);
   background: var(--signal);
-  color: #08111d;
+  color: var(--on-accent);
   border-radius: var(--radius);
   padding: 0.6rem 1rem;
   font-size: 13px;
