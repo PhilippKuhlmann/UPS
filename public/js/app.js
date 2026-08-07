@@ -290,10 +290,14 @@ function renderDevice(container, deviceId) {
       <h2 class="section-title">Verlauf</h2>
       <div class="range-picker" role="group" aria-label="Zeitraum"></div>
     </div>
-    <div class="panel__body"><div class="chart-grid"></div></div>
+    <div class="panel__body">
+      <div class="chart-grid"></div>
+      <p class="note" hidden></p>
+    </div>
   `;
   const rangePicker = historyPanel.querySelector('.range-picker');
   const chartGrid = historyPanel.querySelector('.chart-grid');
+  const chartNote = historyPanel.querySelector('.note');
 
   const controlPanel = document.createElement('section');
   controlPanel.className = 'panel';
@@ -342,9 +346,25 @@ function renderDevice(container, deviceId) {
       return;
     }
 
-    const available = CHART_SPECS.filter((spec) =>
-      response.points.some((point) => point[spec.key] !== null && point[spec.key] !== undefined),
+    // Werte, die das Gerät nur als feste Zahl meldet, bekommen kein Diagramm —
+    // stattdessen steht darunter, warum. Geräte mit echtem Fühler sind nicht
+    // betroffen, weil die Prüfung über die ganze Historie läuft.
+    const statisch = new Map((response.staticMetrics ?? []).map((entry) => [entry.key, entry.value]));
+
+    const available = CHART_SPECS.filter(
+      (spec) =>
+        !statisch.has(spec.key) &&
+        response.points.some((point) => point[spec.key] !== null && point[spec.key] !== undefined),
     );
+
+    const hinweise = CHART_SPECS.filter((spec) => statisch.has(spec.key)).map(
+      (spec) =>
+        `${spec.title} wird nicht gezeichnet: das Gerät meldet unverändert ` +
+        `${number(statisch.get(spec.key), spec.decimals ?? 0)} ${spec.unit}, also keinen echten Messwert.`,
+    );
+
+    chartNote.textContent = hinweise.join(' ');
+    chartNote.hidden = hinweise.length === 0;
 
     if (available.length === 0) {
       chartGrid.innerHTML = `<div class="empty-state">

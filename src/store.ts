@@ -336,6 +336,42 @@ export class Store {
     return server;
   }
 
+  /**
+   * Prüft, ob ein Messwert über die **gesamte** gespeicherte Historie nie einen
+   * anderen Wert hatte. Manche Geräte melden für einen fehlenden Fühler eine
+   * feste Zahl — die UniFi UPS 2U etwa immer 25,0 °C. Ein Diagramm davon
+   * täuscht eine Messung vor, die es nicht gibt.
+   *
+   * Bewusst über die ganze Historie und nicht über das angezeigte Fenster:
+   * ein echter Fühler steht durchaus mal eine Stunde still, aber nicht tagelang.
+   * Ohne genug Material wird nichts behauptet.
+   */
+  staticMetric(
+    deviceId: string,
+    column: 'temperature',
+    minSamples = 500,
+    minSpanMs = 60 * 60 * 1000,
+  ): { isStatic: boolean; value: number | null } {
+    const row = this.db
+      .prepare(
+        `SELECT COUNT(*) AS n, COUNT(DISTINCT ${column}) AS distinct_values,
+                MIN(${column}) AS value, MIN(ts) AS first_ts, MAX(ts) AS last_ts
+         FROM samples WHERE device_id = ? AND ${column} IS NOT NULL`,
+      )
+      .get(deviceId) as {
+      n: number;
+      distinct_values: number;
+      value: number | null;
+      first_ts: number | null;
+      last_ts: number | null;
+    };
+
+    const span = (row.last_ts ?? 0) - (row.first_ts ?? 0);
+    const isStatic = row.distinct_values === 1 && row.n >= minSamples && span >= minSpanMs;
+
+    return { isStatic, value: isStatic ? row.value : null };
+  }
+
   // ── Einstellungen ──────────────────────────────────────────────────────
 
   /** Reads a JSON setting, or null when it was never written. */

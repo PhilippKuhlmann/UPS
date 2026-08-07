@@ -281,10 +281,15 @@ export function createApiRouter({
       return badRequest(res, 'Ungültiger Zeitraum');
     }
 
+    // Messwerte, die das Gerät nur als feste Zahl meldet, werden gemeldet statt
+    // gezeichnet — ein Diagramm davon täuscht eine Messung vor.
+    const temperature = store.staticMetric(id, 'temperature');
+
     res.json({
       deviceId: id,
       from,
       to,
+      staticMetrics: temperature.isStatic ? [{ key: 'temperature', value: temperature.value }] : [],
       points: store.history({ deviceId: id, from, to, points: Number(req.query.points) || 300 }),
     });
   });
