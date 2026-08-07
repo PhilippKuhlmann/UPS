@@ -6,8 +6,7 @@
  */
 import { number, shortTime, dateTime } from './format.js';
 
-const PAD = { top: 8, right: 12, bottom: 18, left: 38 };
-const HEIGHT = 150;
+const PAD = { top: 10, right: 14, bottom: 20, left: 42 };
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 function el(name, attributes = {}) {
@@ -99,15 +98,17 @@ export function createChart({ title, unit, color, domain = 'auto', decimals = 0 
     empty.hidden = true;
     tableToggle.hidden = false;
 
-    // The SVG is sized by CSS (100% × 150px); the viewBox mirrors those pixels
-    // 1:1 so strokes and text keep their intended size at any card width.
-    const plotWidth = Math.max(160, Math.round(svg.getBoundingClientRect().width));
-    svg.setAttribute('viewBox', `0 0 ${plotWidth} ${HEIGHT}`);
+    // Breite und Höhe kommen aus dem Stylesheet; die viewBox bildet sie 1:1
+    // ab, damit Linien und Beschriftungen in jeder Größe gleich bleiben.
+    const box = svg.getBoundingClientRect();
+    const plotWidth = Math.max(160, Math.round(box.width));
+    const plotHeight = Math.max(120, Math.round(box.height));
+    svg.setAttribute('viewBox', `0 0 ${plotWidth} ${plotHeight}`);
 
     const values = points.map((point) => point.v);
     const [lo, hi] = computeDomain(values, domain);
     const innerWidth = plotWidth - PAD.left - PAD.right;
-    const innerHeight = HEIGHT - PAD.top - PAD.bottom;
+    const innerHeight = plotHeight - PAD.top - PAD.bottom;
 
     const firstT = points[0].t;
     const lastT = points[points.length - 1].t;
@@ -118,7 +119,9 @@ export function createChart({ title, unit, color, domain = 'auto', decimals = 0 
 
     geometry = { x, y, innerWidth, plotWidth };
 
-    for (const fraction of [0, 0.5, 1]) {
+    // Fünf Linien statt drei: auf der höheren Fläche lässt sich damit ein Wert
+    // ablesen, ohne ihn zwischen zwei weit entfernten Marken zu schätzen.
+    for (const fraction of [0, 0.25, 0.5, 0.75, 1]) {
       const value = lo + (hi - lo) * fraction;
       const yPos = Math.round(y(value)) + 0.5;
       svg.append(
@@ -147,7 +150,7 @@ export function createChart({ title, unit, color, domain = 'auto', decimals = 0 
       const label = el('text', {
         class: 'chart__axis-label',
         x: anchor === 'start' ? PAD.left : plotWidth - PAD.right,
-        y: HEIGHT - 5,
+        y: plotHeight - 6,
         'text-anchor': anchor,
       });
       label.textContent = shortTime(t);
