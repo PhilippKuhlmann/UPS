@@ -4,6 +4,7 @@
  */
 import { api } from './api.js';
 import { dateTime, escapeHtml } from './format.js';
+import { renderSnmpSection } from './snmp.js';
 
 const BLANK = { name: '', host: '', port: 3493, username: '', password: '' };
 
@@ -69,6 +70,13 @@ export function renderServers(container, { onChanged }) {
   formPanel.className = 'panel';
 
   container.append(listPanel, formPanel);
+
+  // Direkt per SNMP abgefragte Geräte stehen darunter — für USVs, deren
+  // Netzwerkkarte kein NUT spricht.
+  const snmpSection = document.createElement('div');
+  snmpSection.style.marginTop = '2rem';
+  container.append(snmpSection);
+  renderSnmpSection(snmpSection, { onChanged });
 
   function setMessage(text, tone) {
     const box = formPanel.querySelector('.server-form__message');

@@ -4,9 +4,22 @@ import { AUTH_COOKIE, AuthError, readCookie, serializeCookie, type AuthService, 
 import { redactConfig, type AppConfig } from './config.js';
 import { messageForEvent, redactSettings, type ChannelName, type Notifier } from './notify.js';
 import { withNutConnection } from './nut/client.js';
-import type { Poller } from './poller.js';
+import { snmpTarget, type Poller } from './poller.js';
+import {
+  AUTH_PROTOCOL_NAMES,
+  PRIV_PROTOCOL_NAMES,
+  readDevice,
+  SECURITY_LEVEL_NAMES,
+} from './snmp/client.js';
+import { PROFILES } from './snmp/mibs.js';
 import type { Store } from './store.js';
-import type { AlertEvent, NutServerPublic, NutServerRecord } from './types.js';
+import type {
+  AlertEvent,
+  NutServerPublic,
+  NutServerRecord,
+  SnmpDevicePublic,
+  SnmpDeviceRecord,
+} from './types.js';
 
 const RANGE_MS: Record<string, number> = {
   '1h': 60 * 60 * 1000,
@@ -84,6 +97,87 @@ function parseServerInput(body: unknown, { partial }: { partial: boolean }) {
 }
 
 class ValidationError extends Error {}
+
+const SNMP_VERSIONS = ['1', '2c', '3'];
+
+function parseSnmpInput(body: unknown, { partial }: { partial: boolean }) {
+  const input = (body ?? {}) as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+
+  const optionalText = (key: string) => {
+    if (input[key] === undefined) return;
+    result[key] = String(input[key]).trim() || null;
+  };
+
+  if (input.name !== undefined || !partial) {
+    const name = String(input.name ?? '').trim();
+    if (!NAME_PATTERN.test(name) || name.includes('/')) {
+      throw new ValidationError(
+        'Der Name darf nur Buchstaben, Ziffern, Leerzeichen, Punkt, Strich und Unterstrich enthalten (max. 40 Zeichen).',
+      );
+    }
+    result.name = name;
+  }
+
+  if (input.host !== undefined || !partial) {
+    const host = String(input.host ?? '').trim();
+    if (!host) throw new ValidationError('Adresse der Netzwerkkarte fehlt.');
+    result.host = host;
+  }
+
+  if (input.port !== undefined || !partial) {
+    const port = Number(input.port ?? 161);
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw new ValidationError('Port muss zwischen 1 und 65535 liegen.');
+    }
+    result.port = port;
+  }
+
+  if (input.version !== undefined || !partial) {
+    const version = String(input.version ?? '2c');
+    if (!SNMP_VERSIONS.includes(version)) {
+      throw new ValidationError(`SNMP-Version muss ${SNMP_VERSIONS.join(', ')} sein.`);
+    }
+    result.version = version;
+  }
+
+  if (input.profile !== undefined) {
+    const profile = String(input.profile).trim();
+    if (profile && !PROFILES.some((entry) => entry.name === profile)) {
+      throw new ValidationError(`Unbekanntes Profil "${profile}".`);
+    }
+    result.profile = profile || null;
+  }
+
+  for (const key of ['community', 'securityLevel', 'securityName', 'authProtocol', 'privProtocol']) {
+    optionalText(key);
+  }
+  // Leere Geheimnisse heißen „unverändert lassen", nicht „löschen".
+  for (const key of ['authPassword', 'privPassword']) {
+    if (input[key] !== undefined && String(input[key])) result[key] = String(input[key]);
+  }
+  if (input.enabled !== undefined) result.enabled = Boolean(input.enabled);
+
+  if (result.version === '3' && !partial && !result.securityName) {
+    throw new ValidationError('Für SNMPv3 wird ein Benutzername gebraucht.');
+  }
+
+  return result as {
+    name?: string;
+    host?: string;
+    port?: number;
+    version?: string;
+    community?: string | null;
+    securityLevel?: string | null;
+    securityName?: string | null;
+    authProtocol?: string | null;
+    authPassword?: string | null;
+    privProtocol?: string | null;
+    privPassword?: string | null;
+    profile?: string | null;
+    enabled?: boolean;
+  };
+}
 
 interface AuthedRequest extends Request {
   sessionUser?: SessionUser;
@@ -517,7 +611,127 @@ export function createApiRouter({
     res.json({ ok: true, name: removed.name });
   });
 
+  // ── SNMP-Geräte ─────────────────────────────────────────────────────────
+
+  /** Namen müssen über beide Quellenarten hinweg eindeutig sein. */
+  function nameTaken(name: string, exceptSnmpId?: number): boolean {
+    if (store.listServers().some((server) => server.name === name)) return true;
+    return store.listSnmpDevices().some((device) => device.name === name && device.id !== exceptSnmpId);
+  }
+
+  router.get('/snmp-devices', (_req, res) => {
+    res.json(store.listSnmpDevices().map(toPublicSnmpDevice));
+  });
+
+  router.get('/snmp-profiles', (_req, res) => {
+    res.json({
+      profiles: PROFILES.map((profile) => ({ name: profile.name, label: profile.label })),
+      securityLevels: SECURITY_LEVEL_NAMES,
+      authProtocols: AUTH_PROTOCOL_NAMES,
+      privProtocols: PRIV_PROTOCOL_NAMES,
+    });
+  });
+
+  /**
+   * Baut probeweise eine Verbindung auf und zeigt, welches Profil greift und
+   * welche Werte ankommen — damit man vor dem Speichern sieht, ob es passt.
+   */
+  router.post('/snmp-devices/test', async (req, res) => {
+    let input;
+    try {
+      input = parseSnmpInput({ name: 'test', ...(req.body ?? {}) }, { partial: false });
+    } catch (error) {
+      return badRequest(res, (error as Error).message);
+    }
+
+    // Ein bestehendes Gerät darf ohne erneute Eingabe der Geheimnisse geprüft werden.
+    const existing = Number.isInteger(Number(req.body?.id)) ? store.snmpDevice(Number(req.body.id)) : null;
+    const target = snmpTarget({
+      ...(existing ?? {}),
+      ...input,
+      community: input.community ?? existing?.community ?? null,
+      authPassword: input.authPassword ?? existing?.authPassword ?? null,
+      privPassword: input.privPassword ?? existing?.privPassword ?? null,
+    } as never);
+
+    try {
+      const { profile, readings } = await readDevice(target, input.profile ?? null);
+      const metrics = profile.toMetrics(readings);
+      const flags = profile.toStatusFlags(readings);
+
+      res.json({
+        ok: true,
+        profile: { name: profile.name, label: profile.label },
+        identity: profile.toIdentity(readings),
+        statusFlags: flags,
+        metrics,
+      });
+    } catch (error) {
+      res.status(502).json({ ok: false, error: (error as Error).message });
+    }
+  });
+
+  router.post('/snmp-devices', (req, res) => {
+    let input;
+    try {
+      input = parseSnmpInput(req.body, { partial: false });
+    } catch (error) {
+      return badRequest(res, (error as Error).message);
+    }
+
+    if (nameTaken(input.name!)) {
+      return res.status(409).json({ error: `Der Name "${input.name}" ist schon vergeben.` });
+    }
+
+    const created = store.createSnmpDevice(input as never);
+    reloadServers();
+    res.status(201).json(toPublicSnmpDevice(created));
+  });
+
+  router.patch('/snmp-devices/:id', (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return badRequest(res, 'Ungültige Geräte-ID');
+
+    let patch;
+    try {
+      patch = parseSnmpInput(req.body, { partial: true });
+    } catch (error) {
+      return badRequest(res, (error as Error).message);
+    }
+
+    if (patch.name && nameTaken(patch.name, id)) {
+      return res.status(409).json({ error: `Der Name "${patch.name}" ist schon vergeben.` });
+    }
+
+    const updated = store.updateSnmpDevice(id, patch);
+    if (!updated) return notFound(res, 'Gerät nicht gefunden');
+
+    reloadServers();
+    res.json(toPublicSnmpDevice(updated));
+  });
+
+  router.delete('/snmp-devices/:id', (req, res) => {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return badRequest(res, 'Ungültige Geräte-ID');
+
+    const removed = store.deleteSnmpDevice(id);
+    if (!removed) return notFound(res, 'Gerät nicht gefunden');
+
+    reloadServers();
+    res.json({ ok: true, name: removed.name });
+  });
+
   return router;
+}
+
+function toPublicSnmpDevice(device: SnmpDeviceRecord): SnmpDevicePublic {
+  const { community, authPassword, privPassword, ...rest } = device;
+  return {
+    ...rest,
+    hasCommunity: Boolean(community),
+    hasAuthPassword: Boolean(authPassword),
+    hasPrivPassword: Boolean(privPassword),
+  };
 }
 
 function toPublicServer(server: NutServerRecord): NutServerPublic {

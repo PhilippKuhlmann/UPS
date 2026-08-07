@@ -12,17 +12,20 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "mock-nut": "tsx src/tools/mock-nut-server.ts"
+    "mock-nut": "tsx src/tools/mock-nut-server.ts",
+    "mock-snmp": "tsx src/tools/mock-snmp-ups.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0",
     "express": "^4.21.2",
+    "net-snmp": "^3.26.3",
     "nodemailer": "^9.0.4",
     "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
     "@types/express": "^4.17.21",
+    "@types/net-snmp": "^3.23.0",
     "@types/node": "^22.10.2",
     "@types/nodemailer": "^8.0.1",
     "@types/ws": "^8.5.13",

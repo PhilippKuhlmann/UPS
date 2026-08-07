@@ -16,6 +16,9 @@ Die App spricht das NUT-Netzwerkprotokoll direkt über TCP 3493 — es muss kein
   anlegen, bearbeiten, pausieren und entfernen. „Verbindung testen" zeigt vor dem
   Speichern, welche USV der Server meldet. Änderungen greifen sofort, ohne
   Neustart.
+- **USV direkt per SNMP** — für Geräte mit Netzwerkkarte, die keinen NUT-Server
+  mitbringen (APC und viele andere). Kein Zusatzdienst nötig; ebenfalls in der
+  Oberfläche einzurichten und zu testen.
 - **Eine einzige Datenbank** — Messwerte, Ereignisse, Serverliste, Konten und
   Sitzungen liegen zusammen in einer SQLite-Datei.
 
@@ -170,7 +173,7 @@ Batterietests. Angebotene Befehle: `load.on`, `load.off`, `shutdown.reboot`,
 
 Eine einzige SQLite-Datei (`DB_PATH`, im Container `/data/ups.db`): `samples`
 (Messwerte), `events` (Alarme und Befehlsprotokoll), `nut_servers` (Serverliste),
-`settings` (Meldewege), `users` und `sessions`.
+`snmp_devices` (SNMP-Geräte), `settings` (Meldewege), `users` und `sessions`.
 
 Zwei Dinge dazu, offen gesagt:
 
@@ -185,6 +188,37 @@ Zwei Dinge dazu, offen gesagt:
 
 Wer alles zurücksetzen will, löscht die Datei: beim nächsten Start entstehen
 Konto und Serverliste neu.
+
+### USV per SNMP (ohne NUT-Server)
+
+Netzwerkkarten wie die APC NMC sprechen SNMP, nicht NUT. Statt einen NUT-Server
+mit `snmp-ups` dazwischenzustellen, fragt ups-nut sie direkt ab — einzurichten
+unter „Server" im Abschnitt **USV per SNMP**.
+
+Unterstützt werden **SNMP v1, v2c und v3** (bis SHA-512 und AES-256) und zwei
+MIB-Profile, die automatisch erkannt werden:
+
+| Profil | Passt auf |
+| --- | --- |
+| **APC PowerNet** | APC-Karten AP96xx, Smart-UPS, Symmetra |
+| **Standard-USV-MIB (RFC 1628)** | herstellerübergreifend, u. a. Eaton, Riello, Online, viele OEM-Karten |
+
+Ausgelesen werden Ladezustand, Restlaufzeit, Last, Ein- und Ausgangsspannung,
+Batteriespannung, Frequenz, Wirkleistung und Temperatur; der Betriebszustand
+wird auf dieselben Statusflags abgebildet, die NUT verwendet (`OL`, `OB`, `LB`,
+`RB`, `BYPASS`, `CHRG` …). Dashboard, Verlauf, Alarme und Meldewege verhalten
+sich danach identisch zu NUT-Geräten.
+
+Bewusst **nicht** enthalten:
+
+- **Steuerbefehle.** Bei SNMP liefen die über Schreibzugriffe; solange das nicht
+  umgesetzt ist, bietet die Oberfläche für SNMP-Geräte keine Befehle an, statt
+  etwas scheinbar Verfügbares anzuzeigen.
+- **Die hunderte Gerätedefinitionen von `snmp-ups`.** Wessen USV auf keines der
+  zwei Profile passt, bindet sie weiterhin über einen NUT-Server an.
+
+Zum Ausprobieren ohne Hardware simuliert `npm run mock-snmp` eine APC-Karte auf
+UDP 1161 samt gelegentlicher Stromausfälle.
 
 ### Rechte auf dem NUT-Server
 
@@ -262,6 +296,9 @@ verlangt ein gültiges Sitzungs-Cookie.
 | `GET` · `PUT` | `/api/notifications` | Meldewege lesen und speichern (ohne Geheimnisse) |
 | `POST` | `/api/notifications/:channel/test` | Testnachricht über einen Meldeweg |
 | `GET` | `/api/servers` | NUT-Server, ohne Passwörter |
+| `GET` | `/api/snmp-devices` · `/api/snmp-profiles` | SNMP-Geräte und verfügbare Profile |
+| `POST` | `/api/snmp-devices/test` | SNMP probeweise abfragen, erkanntes Profil und Werte zurückgeben |
+| `POST` · `PATCH` · `DELETE` | `/api/snmp-devices` · `/api/snmp-devices/:id` | anlegen, ändern, entfernen |
 | `POST` | `/api/servers/test` | Verbindung probeweise aufbauen, gefundene USV zurückgeben |
 | `POST` · `PATCH` · `DELETE` | `/api/servers` · `/api/servers/:id` | anlegen, ändern, entfernen |
 | `GET` | `/api/state` | Geräte, aktive Alarme und Konfiguration in einem Aufruf |
@@ -283,6 +320,8 @@ jedes neue Ereignis an alle offenen Browser.
 src/
   nut/protocol.ts   Tokenizer und Antwort-Parser des NUT-Protokolls
   nut/client.ts     TCP-Verbindung, Befehlswarteschlange, LIST/GET/INSTCMD/SET
+  snmp/mibs.ts      MIB-Profile: OIDs, Einheiten, Zustandsabbildung
+  snmp/client.ts    SNMP-Sitzungen v1/v2c/v3, Profilerkennung
   poller.ts         Abfrageschleife, wandelt NUT-Variablen in Snapshots
   alerts.ts         Regelwerk, Zustandsübergänge, Webhook
   auth.ts           Passwort-Hashing, Sitzungen, Sperre nach Fehlversuchen

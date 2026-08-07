@@ -1,7 +1,9 @@
 import { EventEmitter } from 'node:events';
 import type { AppConfig, NutServerConfig } from './config.js';
 import { NutConnection, withNutConnection } from './nut/client.js';
-import type { DeviceSnapshot, Metrics, PowerPath, Severity } from './types.js';
+import { readDevice, type SnmpTarget } from './snmp/client.js';
+import { toNutVars } from './snmp/mibs.js';
+import type { DeviceSnapshot, Metrics, PowerPath, Severity, SnmpDeviceRecord } from './types.js';
 
 /** Metadata (command list, writable vars) is refreshed every N polls, not every poll. */
 const METADATA_REFRESH_EVERY = 12;
@@ -36,10 +38,31 @@ export class Poller extends EventEmitter {
   private timer: NodeJS.Timeout | null = null;
   private polling = false;
 
+  /** Direkt per SNMP abgefragte Geräte, unabhängig von den NUT-Servern. */
+  private snmpDevices: SnmpDeviceRecord[] = [];
+
   constructor(config: AppConfig, servers: NutServerConfig[] = []) {
     super();
     this.config = config;
     this.servers = servers.map((server) => createServerState(server));
+  }
+
+  /** Ersetzt die Liste der SNMP-Geräte; wirkt ab der nächsten Abfrage. */
+  setSnmpDevices(devices: SnmpDeviceRecord[]): void {
+    this.snmpDevices = devices;
+
+    const configured = new Set(devices.map((device) => device.name));
+    for (const id of [...this.snmpDevicesIds()]) {
+      if (!configured.has(id.slice(0, id.indexOf('/')))) this.snapshotsById.delete(id);
+    }
+
+    if (this.timer) void this.poll();
+  }
+
+  /** Geräte-IDs, die aus SNMP-Quellen stammen. */
+  private snmpDevicesIds(): string[] {
+    const nutNames = new Set(this.servers.map((server) => server.config.name));
+    return [...this.snapshotsById.keys()].filter((id) => !nutNames.has(id.slice(0, id.indexOf('/'))));
   }
 
   /**
@@ -152,20 +175,27 @@ export class Poller extends EventEmitter {
     this.polling = true;
 
     try {
-      const results = await Promise.all(this.servers.map((server) => this.pollServer(server)));
-      const snapshots = results.flatMap((result) => result.snapshots);
+      const [nutResults, snmpSnapshots] = await Promise.all([
+        Promise.all(this.servers.map((server) => this.pollServer(server))),
+        Promise.all(this.snmpDevices.map((device) => this.pollSnmpDevice(device))),
+      ]);
 
-      for (const id of results.flatMap((result) => result.drop)) {
+      const snapshots = [...nutResults.flatMap((result) => result.snapshots), ...snmpSnapshots];
+
+      for (const id of nutResults.flatMap((result) => result.drop)) {
         this.snapshotsById.delete(id);
       }
       for (const snapshot of snapshots) {
         this.snapshotsById.set(snapshot.id, snapshot);
       }
 
-      // Eine Abfrage, die beim Entfernen eines Servers schon lief, liefert
-      // dessen Geräte noch nach. Was zu keinem konfigurierten Server mehr
-      // gehört, fliegt hier raus.
-      const configured = new Set(this.servers.map((server) => server.config.name));
+      // Eine Abfrage, die beim Entfernen einer Quelle schon lief, liefert deren
+      // Geräte noch nach. Was zu keiner konfigurierten Quelle mehr gehört,
+      // fliegt hier raus.
+      const configured = new Set([
+        ...this.servers.map((server) => server.config.name),
+        ...this.snmpDevices.map((device) => device.name),
+      ]);
       for (const id of [...this.snapshotsById.keys()]) {
         if (!configured.has(id.slice(0, id.indexOf('/')))) this.snapshotsById.delete(id);
       }
@@ -176,6 +206,50 @@ export class Poller extends EventEmitter {
       );
     } finally {
       this.polling = false;
+    }
+  }
+
+  /**
+   * Fragt ein Gerät direkt per SNMP ab. Anders als bei NUT steht ein Eintrag
+   * für genau ein Gerät; die Geräte-ID lautet `<name>/ups`, damit Verlauf,
+   * Alarme und Routen unverändert funktionieren.
+   */
+  private async pollSnmpDevice(device: SnmpDeviceRecord): Promise<DeviceSnapshot> {
+    const id = `${device.name}/ups`;
+    const previous = this.snapshotsById.get(id);
+
+    try {
+      const { profile, readings } = await readDevice(snmpTarget(device), device.profile);
+      const metrics = profile.toMetrics(readings);
+      const statusFlags = profile.toStatusFlags(readings);
+      const identity = profile.toIdentity(readings);
+
+      return {
+        id,
+        serverName: device.name,
+        // Bei SNMP sind Quelle und Gerät dasselbe; als Beschriftung taugt der
+        // vergebene Name mehr als ein generisches „ups".
+        upsName: device.name,
+        description: `${device.host} · ${profile.label}`,
+        reachable: true,
+        updatedAt: Date.now(),
+        statusFlags,
+        severity: severityFor(statusFlags),
+        powerPath: powerPathFor(statusFlags),
+        charging: statusFlags.includes('CHRG'),
+        metrics,
+        vars: toNutVars(profile, readings, metrics, statusFlags),
+        writableVars: {},
+        // Steuerbefehle laufen bei SNMP über Schreibzugriffe; bewusst noch nicht
+        // umgesetzt, damit hier nichts scheinbar Verfügbares angeboten wird.
+        commands: [],
+        model: identity.model,
+        manufacturer: typeof readings.manufacturer === 'string' ? readings.manufacturer.trim() : 'APC',
+        serial: identity.serial,
+        driver: `snmp (${profile.label})`,
+      };
+    } catch (error) {
+      return unreachableSnapshot(previous, id, device.name, (error as Error).message);
     }
   }
 
@@ -258,6 +332,21 @@ export class Poller extends EventEmitter {
       };
     }
   }
+}
+
+export function snmpTarget(device: SnmpDeviceRecord): SnmpTarget {
+  return {
+    host: device.host,
+    port: device.port,
+    version: device.version,
+    community: device.community,
+    securityLevel: device.securityLevel,
+    securityName: device.securityName,
+    authProtocol: device.authProtocol,
+    authPassword: device.authPassword,
+    privProtocol: device.privProtocol,
+    privPassword: device.privPassword,
+  };
 }
 
 function createServerState(config: NutServerConfig): ServerState {

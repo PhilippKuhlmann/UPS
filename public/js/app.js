@@ -419,7 +419,12 @@ function renderDevice(container, deviceId) {
 
     summary.querySelector('.device__head').innerHTML = `
       <div>
-        <div class="device__name">${escapeHtml(device.upsName)} <span class="eyebrow">auf ${escapeHtml(device.serverName)}</span></div>
+        <div class="device__name">${escapeHtml(device.upsName)}${
+          // Bei SNMP-Geräten sind Quelle und Gerät dasselbe — dann wäre „auf X" doppelt.
+          device.upsName === device.serverName
+            ? ''
+            : ` <span class="eyebrow">auf ${escapeHtml(device.serverName)}</span>`
+        }</div>
         <div class="device__meta">${escapeHtml([device.manufacturer, device.model].filter(Boolean).join(' ') || device.description || '—')}${device.serial ? ` · S/N ${escapeHtml(device.serial)}` : ''}${device.driver ? ` · ${escapeHtml(device.driver)}` : ''}</div>
       </div>
       ${statusChip(device)}

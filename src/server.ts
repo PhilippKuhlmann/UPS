@@ -63,6 +63,7 @@ function toPollerServers() {
 
 function reloadServers(): void {
   poller.setServers(toPollerServers());
+  poller.setSnmpDevices(store.listSnmpDevices().filter((device) => device.enabled));
 }
 
 if (config.auth.enabled) {
@@ -168,6 +169,8 @@ function housekeeping(): void {
 
 housekeeping();
 const pruneTimer = setInterval(housekeeping, 60 * 60 * 1000);
+
+poller.setSnmpDevices(store.listSnmpDevices().filter((device) => device.enabled));
 
 server.listen(config.port, config.bindHost, () => {
   const servers = toPollerServers();

@@ -73,6 +73,15 @@ export const api = {
     request('/api/notifications', { method: 'PUT', body: JSON.stringify(patch) }),
   testNotification: (channel, config) =>
     request(`/api/notifications/${channel}/test`, { method: 'POST', body: JSON.stringify(config) }),
+  snmpDevices: () => request('/api/snmp-devices'),
+  snmpProfiles: () => request('/api/snmp-profiles'),
+  testSnmpDevice: (device) =>
+    request('/api/snmp-devices/test', { method: 'POST', body: JSON.stringify(device) }),
+  createSnmpDevice: (device) =>
+    request('/api/snmp-devices', { method: 'POST', body: JSON.stringify(device) }),
+  updateSnmpDevice: (id, patch) =>
+    request(`/api/snmp-devices/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  deleteSnmpDevice: (id) => request(`/api/snmp-devices/${id}`, { method: 'DELETE' }),
   servers: () => request('/api/servers'),
   testServer: (server) => request('/api/servers/test', { method: 'POST', body: JSON.stringify(server) }),
   createServer: (server) => request('/api/servers', { method: 'POST', body: JSON.stringify(server) }),

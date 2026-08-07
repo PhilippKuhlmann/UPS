@@ -1,7 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import type { AlertEvent, DeviceSnapshot, HistoryPoint, NutServerRecord, Severity } from './types.js';
+import type {
+  AlertEvent,
+  DeviceSnapshot,
+  HistoryPoint,
+  NutServerRecord,
+  Severity,
+  SnmpDeviceRecord,
+} from './types.js';
 
 export interface ServerInput {
   name: string;
@@ -9,6 +16,22 @@ export interface ServerInput {
   port: number;
   username?: string | null;
   password?: string | null;
+  enabled?: boolean;
+}
+
+export interface SnmpDeviceInput {
+  name: string;
+  host: string;
+  port: number;
+  version: string;
+  community?: string | null;
+  securityLevel?: string | null;
+  securityName?: string | null;
+  authProtocol?: string | null;
+  authPassword?: string | null;
+  privProtocol?: string | null;
+  privPassword?: string | null;
+  profile?: string | null;
   enabled?: boolean;
 }
 
@@ -69,6 +92,25 @@ CREATE TABLE IF NOT EXISTS sessions (
   last_seen_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions (expires_at);
+
+CREATE TABLE IF NOT EXISTS snmp_devices (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  name           TEXT    NOT NULL UNIQUE,
+  host           TEXT    NOT NULL,
+  port           INTEGER NOT NULL DEFAULT 161,
+  version        TEXT    NOT NULL DEFAULT '2c',
+  community      TEXT,
+  security_level TEXT,
+  security_name  TEXT,
+  auth_protocol  TEXT,
+  auth_password  TEXT,
+  priv_protocol  TEXT,
+  priv_password  TEXT,
+  profile        TEXT,
+  enabled        INTEGER NOT NULL DEFAULT 1,
+  created_at     INTEGER NOT NULL,
+  updated_at     INTEGER NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS settings (
   key        TEXT PRIMARY KEY,
@@ -336,6 +378,84 @@ export class Store {
     return server;
   }
 
+  // ── SNMP-Geräte ────────────────────────────────────────────────────────
+
+  listSnmpDevices(): SnmpDeviceRecord[] {
+    const rows = this.db.prepare('SELECT * FROM snmp_devices ORDER BY name').all() as SnmpRow[];
+    return rows.map(toSnmpRecord);
+  }
+
+  snmpDevice(id: number): SnmpDeviceRecord | null {
+    const row = this.db.prepare('SELECT * FROM snmp_devices WHERE id = ?').get(id) as SnmpRow | undefined;
+    return row ? toSnmpRecord(row) : null;
+  }
+
+  createSnmpDevice(input: SnmpDeviceInput): SnmpDeviceRecord {
+    const now = Date.now();
+    const result = this.db
+      .prepare(
+        `INSERT INTO snmp_devices (name, host, port, version, community, security_level, security_name,
+                                   auth_protocol, auth_password, priv_protocol, priv_password, profile,
+                                   enabled, created_at, updated_at)
+         VALUES (@name, @host, @port, @version, @community, @security_level, @security_name,
+                 @auth_protocol, @auth_password, @priv_protocol, @priv_password, @profile,
+                 @enabled, @created_at, @updated_at)`,
+      )
+      .run({ ...toSnmpColumns(input), enabled: input.enabled === false ? 0 : 1, created_at: now, updated_at: now });
+
+    return this.snmpDevice(Number(result.lastInsertRowid))!;
+  }
+
+  /** Nicht gesetzte Felder behalten ihren Wert — insbesondere die Geheimnisse. */
+  updateSnmpDevice(id: number, patch: Partial<SnmpDeviceInput>): SnmpDeviceRecord | null {
+    const current = this.snmpDevice(id);
+    if (!current) return null;
+
+    const merged: SnmpDeviceInput = {
+      name: patch.name ?? current.name,
+      host: patch.host ?? current.host,
+      port: patch.port ?? current.port,
+      version: patch.version ?? current.version,
+      community: patch.community === undefined ? current.community : patch.community || null,
+      securityLevel: patch.securityLevel === undefined ? current.securityLevel : patch.securityLevel || null,
+      securityName: patch.securityName === undefined ? current.securityName : patch.securityName || null,
+      authProtocol: patch.authProtocol === undefined ? current.authProtocol : patch.authProtocol || null,
+      authPassword: patch.authPassword === undefined ? current.authPassword : patch.authPassword || null,
+      privProtocol: patch.privProtocol === undefined ? current.privProtocol : patch.privProtocol || null,
+      privPassword: patch.privPassword === undefined ? current.privPassword : patch.privPassword || null,
+      profile: patch.profile === undefined ? current.profile : patch.profile || null,
+      enabled: patch.enabled === undefined ? current.enabled : patch.enabled,
+    };
+
+    this.db
+      .prepare(
+        `UPDATE snmp_devices SET name=@name, host=@host, port=@port, version=@version,
+                community=@community, security_level=@security_level, security_name=@security_name,
+                auth_protocol=@auth_protocol, auth_password=@auth_password,
+                priv_protocol=@priv_protocol, priv_password=@priv_password, profile=@profile,
+                enabled=@enabled, updated_at=@updated_at
+         WHERE id=@id`,
+      )
+      .run({ ...toSnmpColumns(merged), enabled: merged.enabled === false ? 0 : 1, updated_at: Date.now(), id });
+
+    return this.snmpDevice(id);
+  }
+
+  /** Entfernt das Gerät samt Verlauf und Ereignissen. */
+  deleteSnmpDevice(id: number): SnmpDeviceRecord | null {
+    const device = this.snmpDevice(id);
+    if (!device) return null;
+
+    const prefix = `${device.name}/`;
+    this.db.transaction(() => {
+      this.db.prepare('DELETE FROM samples WHERE device_id LIKE ?').run(`${prefix}%`);
+      this.db.prepare('DELETE FROM events WHERE device_id LIKE ?').run(`${prefix}%`);
+      this.db.prepare('DELETE FROM snmp_devices WHERE id = ?').run(id);
+    })();
+
+    return device;
+  }
+
   /**
    * Prüft, ob ein Messwert über die **gesamte** gespeicherte Historie nie einen
    * anderen Wert hatte. Manche Geräte melden für einen fehlenden Fühler eine
@@ -413,6 +533,63 @@ export class Store {
 function round(value: number | null): number | null {
   if (value === null || !Number.isFinite(value)) return null;
   return Math.round(value * 100) / 100;
+}
+
+interface SnmpRow {
+  id: number;
+  name: string;
+  host: string;
+  port: number;
+  version: string;
+  community: string | null;
+  security_level: string | null;
+  security_name: string | null;
+  auth_protocol: string | null;
+  auth_password: string | null;
+  priv_protocol: string | null;
+  priv_password: string | null;
+  profile: string | null;
+  enabled: number;
+  created_at: number;
+  updated_at: number;
+}
+
+function toSnmpRecord(row: SnmpRow): SnmpDeviceRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    host: row.host,
+    port: row.port,
+    version: row.version,
+    community: row.community,
+    securityLevel: row.security_level,
+    securityName: row.security_name,
+    authProtocol: row.auth_protocol,
+    authPassword: row.auth_password,
+    privProtocol: row.priv_protocol,
+    privPassword: row.priv_password,
+    profile: row.profile,
+    enabled: row.enabled === 1,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function toSnmpColumns(input: SnmpDeviceInput) {
+  return {
+    name: input.name,
+    host: input.host,
+    port: input.port,
+    version: input.version,
+    community: input.community ?? null,
+    security_level: input.securityLevel ?? null,
+    security_name: input.securityName ?? null,
+    auth_protocol: input.authProtocol ?? null,
+    auth_password: input.authPassword ?? null,
+    priv_protocol: input.privProtocol ?? null,
+    priv_password: input.privPassword ?? null,
+    profile: input.profile ?? null,
+  };
 }
 
 interface ServerRow {

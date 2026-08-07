@@ -76,6 +76,41 @@ export interface NutServerRecord {
 /** The same record with the password removed, for anything leaving the server. */
 export type NutServerPublic = Omit<NutServerRecord, 'password'> & { hasPassword: boolean };
 
+/**
+ * Eine USV, die direkt über SNMP abgefragt wird — typischerweise eine
+ * Netzwerkkarte wie die APC NMC. Anders als bei NUT steht ein Eintrag hier für
+ * genau ein Gerät, nicht für einen Server mit mehreren.
+ */
+export interface SnmpDeviceRecord {
+  id: number;
+  name: string;
+  host: string;
+  port: number;
+  /** `1`, `2c` oder `3`. */
+  version: string;
+  community: string | null;
+  securityLevel: string | null;
+  securityName: string | null;
+  authProtocol: string | null;
+  authPassword: string | null;
+  privProtocol: string | null;
+  privPassword: string | null;
+  /** `apc`, `rfc1628` oder null für automatische Erkennung. */
+  profile: string | null;
+  enabled: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type SnmpDevicePublic = Omit<
+  SnmpDeviceRecord,
+  'community' | 'authPassword' | 'privPassword'
+> & {
+  hasCommunity: boolean;
+  hasAuthPassword: boolean;
+  hasPrivPassword: boolean;
+};
+
 export interface HistoryPoint {
   t: number;
   charge: number | null;
