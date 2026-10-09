@@ -571,6 +571,10 @@ code {
   color: var(--muted-2);
 }
 
+.device__error[data-tone='stale'] {
+  color: var(--warn);
+}
+
 .device__error {
   padding: 0.75rem 1.1rem;
   border-top: 1px solid var(--line);

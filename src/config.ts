@@ -25,6 +25,11 @@ export interface AppConfig {
   bindHost: string;
   pollIntervalMs: number;
   retentionDays: number;
+  /**
+   * So viele Abrufe hintereinander müssen scheitern, bevor ein Gerät als nicht
+   * erreichbar gilt. Ein verlustbehaftetes Netz erzeugt sonst Alarmsalven.
+   */
+  unreachableAfterFailures: number;
   dbPath: string;
   /**
    * Only used to seed the database on first start. Afterwards the `nut_servers`
@@ -139,6 +144,7 @@ export function loadConfig(cwd = process.cwd()): AppConfig {
     bindHost: process.env.BIND_HOST?.trim() || '0.0.0.0',
     pollIntervalMs: Math.max(1000, num(process.env.POLL_INTERVAL_MS, 5000)),
     retentionDays: Math.max(1, num(process.env.HISTORY_RETENTION_DAYS, 30)),
+    unreachableAfterFailures: Math.max(1, num(process.env.UNREACHABLE_AFTER_FAILURES, 3)),
     dbPath: process.env.DB_PATH?.trim() || path.join(cwd, 'data', 'ups.db'),
     seedServers,
     alerts: {
@@ -162,6 +168,7 @@ export function redactConfig(config: AppConfig) {
   return {
     pollIntervalMs: config.pollIntervalMs,
     retentionDays: config.retentionDays,
+    unreachableAfterFailures: config.unreachableAfterFailures,
     alerts: config.alerts,
     webhookConfigured: Boolean(config.webhookUrl),
     authEnabled: config.auth.enabled,

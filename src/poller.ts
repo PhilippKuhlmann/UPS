@@ -23,6 +23,8 @@ interface ServerState {
   ticksSinceMetadata: number;
   /** True while the placeholder above stands in for the whole server. */
   placeholderActive: boolean;
+  /** Fehlgeschlagene Abrufe in Folge; bei Erfolg zurückgesetzt. */
+  consecutiveFailures: number;
 }
 
 interface ServerPollResult {
@@ -40,6 +42,9 @@ export class Poller extends EventEmitter {
 
   /** Direkt per SNMP abgefragte Geräte, unabhängig von den NUT-Servern. */
   private snmpDevices: SnmpDeviceRecord[] = [];
+
+  /** Fehlgeschlagene SNMP-Abrufe in Folge, je Gerätename. */
+  private snmpFailures = new Map<string, number>();
 
   constructor(config: AppConfig, servers: NutServerConfig[] = []) {
     super();
@@ -220,6 +225,8 @@ export class Poller extends EventEmitter {
 
     try {
       const { profile, readings } = await readDevice(snmpTarget(device), device.profile);
+      this.snmpFailures.delete(device.name);
+
       const metrics = profile.toMetrics(readings);
       const statusFlags = profile.toStatusFlags(readings);
       const identity = profile.toIdentity(readings);
@@ -249,7 +256,19 @@ export class Poller extends EventEmitter {
         driver: `snmp (${profile.label})`,
       };
     } catch (error) {
-      return unreachableSnapshot(previous, id, device.name, (error as Error).message);
+      const message = (error as Error).message;
+      const failures = (this.snmpFailures.get(device.name) ?? 0) + 1;
+      this.snmpFailures.set(device.name, failures);
+
+      // Gleiche Toleranz wie bei NUT: erst nach mehreren Fehlschlägen Alarm.
+      if (failures < this.config.unreachableAfterFailures && previous?.reachable) {
+        console.warn(
+          `[poll] ${device.name}: SNMP-Abruf ${failures}/${this.config.unreachableAfterFailures} fehlgeschlagen (${message})`,
+        );
+        return staleSnapshot(previous);
+      }
+
+      return unreachableSnapshot(previous, id, device.name, message);
     }
   }
 
@@ -265,6 +284,8 @@ export class Poller extends EventEmitter {
       if (refreshMetadata) server.ticksSinceMetadata = 0;
 
       const list = await connection.listUps();
+      server.consecutiveFailures = 0;
+
       const snapshots: DeviceSnapshot[] = [];
       const seen = new Set<string>();
 
@@ -315,6 +336,28 @@ export class Poller extends EventEmitter {
       server.connection = null;
 
       const message = (error as Error).message;
+      server.consecutiveFailures++;
+
+      // Ein einzelner verpasster Abruf ist kein Ausfall. In einem Netz mit
+      // Paketverlust liefe sonst bei jedem Aussetzer ein Alarm samt Entwarnung
+      // los. Bis die Toleranz aufgebraucht ist, bleiben die letzten Werte
+      // stehen — sichtbar als veraltet.
+      if (
+        server.consecutiveFailures < this.config.unreachableAfterFailures &&
+        server.knownDeviceIds.size > 0
+      ) {
+        const kept = [...server.knownDeviceIds]
+          .map((id) => this.snapshotsById.get(id))
+          .filter((snapshot): snapshot is DeviceSnapshot => Boolean(snapshot))
+          .map(staleSnapshot);
+
+        if (kept.length > 0) {
+          console.warn(
+            `[poll] ${server.config.name}: Abruf ${server.consecutiveFailures}/${this.config.unreachableAfterFailures} fehlgeschlagen (${message})`,
+          );
+          return { snapshots: kept, drop: [] };
+        }
+      }
 
       if (server.knownDeviceIds.size === 0) {
         server.placeholderActive = true;
@@ -332,6 +375,15 @@ export class Poller extends EventEmitter {
       };
     }
   }
+}
+
+/**
+ * Reicht die letzte gute Momentaufnahme unverändert weiter und markiert sie als
+ * veraltet. `updatedAt` bleibt absichtlich stehen, damit „Letzte Abfrage" die
+ * Wahrheit sagt, und der Verlauf bekommt keinen Eintrag.
+ */
+function staleSnapshot(previous: DeviceSnapshot): DeviceSnapshot {
+  return { ...previous, stale: true };
 }
 
 export function snmpTarget(device: SnmpDeviceRecord): SnmpTarget {
@@ -356,6 +408,7 @@ function createServerState(config: NutServerConfig): ServerState {
     knownDeviceIds: new Set(),
     ticksSinceMetadata: METADATA_REFRESH_EVERY,
     placeholderActive: false,
+    consecutiveFailures: 0,
   };
 }
 

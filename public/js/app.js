@@ -209,8 +209,17 @@ function createDeviceCard(device) {
     `;
     diagram.update(next);
     readouts.innerHTML = readoutsFor(next);
-    error.textContent = next.reachable ? '' : next.error ?? 'Unbekannter Fehler';
-    error.hidden = next.reachable;
+    if (next.stale) {
+      // Werte stehen noch, der letzte Abruf hat aber gefehlt — das gehört dazugesagt,
+      // sonst sieht altes Material aus wie frisches.
+      error.textContent = `Letzter Abruf fehlgeschlagen — Werte von ${clockTime(next.updatedAt)}`;
+      error.dataset.tone = 'stale';
+      error.hidden = false;
+    } else {
+      error.textContent = next.reachable ? '' : next.error ?? 'Unbekannter Fehler';
+      error.dataset.tone = 'error';
+      error.hidden = next.reachable;
+    }
   }
 
   update(device);

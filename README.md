@@ -146,6 +146,7 @@ Start vor. Danach zählt die Oberfläche.
 | `PORT` / `BIND_HOST` | `8080` / `0.0.0.0` | Webserver |
 | `POLL_INTERVAL_MS` | `5000` | Abfrageintervall |
 | `HISTORY_RETENTION_DAYS` | `30` | Aufbewahrung von Messwerten und Ereignissen |
+| `UNREACHABLE_AFTER_FAILURES` | `3` | so viele Abrufe müssen hintereinander scheitern, bevor Alarm ausgelöst wird |
 | `DB_PATH` | `./data/ups.db` | SQLite-Datei |
 | `ALERT_CHARGE_BELOW` | `30` | Schwelle Ladezustand in % |
 | `ALERT_LOAD_ABOVE` | `85` | Schwelle Last in % |
@@ -268,6 +269,21 @@ Home-Assistant-Webhooks, ntfy oder Gotify:
   "timestamp": "2026-08-05T18:30:32.664Z"
 }
 ```
+
+### Aussetzer und Ausfälle
+
+Ein einzelner verpasster Abruf ist noch kein Ausfall. Erst wenn
+`UNREACHABLE_AFTER_FAILURES` Abrufe **hintereinander** scheitern (Vorgabe 3,
+also rund 15 Sekunden), gilt ein Gerät als nicht erreichbar und löst Alarm aus.
+
+Bis dahin bleiben die letzten Messwerte stehen und werden als veraltet
+gekennzeichnet — samt Zeitpunkt des letzten geglückten Abrufs. In den Verlauf
+wandern sie nicht, dort entsteht stattdessen eine Lücke.
+
+Das ist kein Schönheitsfehler, sondern notwendig: in einem Netz mit
+Paketverlust erzeugt jeder Aussetzer sonst einen Alarm **und** eine Entwarnung,
+bei aktivem Mailversand also zwei Nachrichten. Wer Ausfälle sofort gemeldet
+haben will, setzt den Wert auf 1.
 
 ### Protokoll ausgeführter Befehle
 

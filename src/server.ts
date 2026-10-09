@@ -143,7 +143,9 @@ wss.on('connection', (socket: WebSocket) => {
 
 poller.on('poll', (snapshots) => {
   for (const snapshot of snapshots) {
-    store.recordSample(snapshot);
+    // Veraltete Momentaufnahmen sind Wiederholungen des letzten guten Abrufs —
+    // sie gehören nicht noch einmal in den Verlauf.
+    if (!snapshot.stale) store.recordSample(snapshot);
   }
 
   const events = alerts.evaluate(snapshots);

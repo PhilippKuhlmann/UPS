@@ -25,6 +25,12 @@ export interface DeviceSnapshot {
   description: string;
   /** True when the last poll reached the server and the driver answered. */
   reachable: boolean;
+  /**
+   * Der letzte Abruf ist fehlgeschlagen, die Aussetzer-Toleranz aber noch nicht
+   * aufgebraucht: angezeigt werden die vorigen Werte, `updatedAt` bleibt alt.
+   * Solche Momentaufnahmen werden nicht in den Verlauf geschrieben.
+   */
+  stale?: boolean;
   error?: string;
   updatedAt: number;
   /** Raw `ups.status` flags, e.g. `['OL', 'CHRG']`. */
